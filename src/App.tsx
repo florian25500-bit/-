@@ -9,10 +9,22 @@ import { LearningCenterView } from './components/LearningCenterView';
 import { VocabularyBankView } from './components/VocabularyBankView';
 import { HistoryView } from './components/HistoryView';
 import { RubricView } from './components/RubricView';
+import { AuthView } from './components/AuthView';
 import { SAMPLE_TASKS } from './data/sampleTasks';
 import { GRAMMAR_LESSONS } from './data/grammarLessons';
 import { INITIAL_VOCABULARY } from './data/sampleVocabulary';
 import { AssessmentResult, WritingTask, VocabularyItem, GrammarLesson } from './types';
+import {
+  auth,
+  onAuthStateChanged,
+  FirebaseUser,
+  logOut,
+  saveUserSubmission,
+  getUserSubmissions,
+  saveUserVocabulary,
+  getUserVocabulary,
+  deleteUserVocabulary,
+} from './lib/firebase';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -25,45 +37,109 @@ export default function App() {
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Load initial backend data
+  // Authentication states
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  // Listen to Firebase Auth state
   useEffect(() => {
-    async function loadData() {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+
+      if (currentUser) {
+        // Authenticated user: Load real user data from Firestore
+        try {
+          const [userSubs, userVocab] = await Promise.allSettled([
+            getUserSubmissions(currentUser.uid),
+            getUserVocabulary(currentUser.uid),
+          ]);
+
+          if (userSubs.status === 'fulfilled') {
+            const fetchedSubs = userSubs.value || [];
+            setSubmissions(fetchedSubs);
+            if (fetchedSubs.length > 0) {
+              setCurrentAssessment(fetchedSubs[0]);
+            } else {
+              setCurrentAssessment(null);
+            }
+          }
+
+          if (userVocab.status === 'fulfilled' && userVocab.value?.length > 0) {
+            const mappedVocab: VocabularyItem[] = userVocab.value.map((v) => ({
+              id: v.id,
+              word: v.word,
+              part_of_speech: (v.part_of_speech as any) || 'Noun',
+              article: (v.article as any) || undefined,
+              meaning_th: v.meaning_th,
+              example_sentence: v.example_sentence || '',
+              example_translation_th: v.example_translation_th || '',
+              cefr_level: (v.cefr_level as any) || 'B2',
+              created_at: v.created_at,
+            }));
+            // Merge custom vocab with initial vocabulary bank
+            setVocabulary((prev) => {
+              const ids = new Set(prev.map((i) => i.id));
+              const newItems = mappedVocab.filter((v) => !ids.has(v.id));
+              return [...newItems, ...prev];
+            });
+          }
+        } catch (err) {
+          console.warn('Error loading Firestore user data:', err);
+        }
+      } else {
+        // Logged out: strictly reset user submissions to zero (no fake data)
+        setSubmissions([]);
+        setCurrentAssessment(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Load initial static resources (tasks, lessons)
+  useEffect(() => {
+    async function loadResources() {
       try {
-        const [tasksRes, historyRes, lessonsRes, vocabRes] = await Promise.allSettled([
+        const [tasksRes, lessonsRes] = await Promise.allSettled([
           fetch('/api/tasks').then((r) => r.json()),
-          fetch('/api/history').then((r) => r.json()),
           fetch('/api/lessons').then((r) => r.json()),
-          fetch('/api/vocabulary').then((r) => r.json()),
         ]);
 
-        if (tasksRes.status === 'fulfilled' && tasksRes.value?.tasks) {
+        if (tasksRes.status === 'fulfilled' && tasksRes.value?.tasks?.length > 0) {
           setTasks(tasksRes.value.tasks);
-          setSelectedTask(tasksRes.value.tasks[0]);
+          const randomIdx = Math.floor(Math.random() * tasksRes.value.tasks.length);
+          setSelectedTask(tasksRes.value.tasks[randomIdx]);
         }
 
         if (lessonsRes.status === 'fulfilled' && lessonsRes.value?.lessons) {
           setLessons(lessonsRes.value.lessons);
         }
-
-        if (vocabRes.status === 'fulfilled' && vocabRes.value?.vocabulary) {
-          setVocabulary(vocabRes.value.vocabulary);
-        }
-
-        if (historyRes.status === 'fulfilled' && historyRes.value?.submissions?.length > 0) {
-          setSubmissions(historyRes.value.submissions);
-          setCurrentAssessment(historyRes.value.submissions[0]);
-        }
       } catch (err) {
-        console.warn('Error loading backend data:', err);
+        console.warn('Error loading static resources:', err);
       }
     }
 
-    loadData();
+    loadResources();
   }, []);
+
+  const handleRollRandomTask = (levelFilter?: string) => {
+    let pool = [...tasks];
+    if (levelFilter && levelFilter !== 'ALL') {
+      pool = pool.filter((t) => t.cefr_level === levelFilter);
+    }
+    if (pool.length === 0) pool = [...tasks];
+    const randomIndex = Math.floor(Math.random() * pool.length);
+    setSelectedTask(pool[randomIndex]);
+  };
 
   const handleStartWriting = (task?: WritingTask) => {
     if (task) {
       setSelectedTask(task);
+    } else {
+      handleRollRandomTask();
     }
     setActiveTab('editor');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -87,8 +163,25 @@ export default function App() {
 
       const data = await res.json();
       if (data.assessment) {
-        setCurrentAssessment(data.assessment);
-        setSubmissions((prev) => [data.assessment, ...prev]);
+        const newResult: AssessmentResult = data.assessment;
+
+        // Persist to Firestore if user is authenticated
+        if (user) {
+          try {
+            await saveUserSubmission(user.uid, newResult);
+            setSyncNotice('บันทึกผลการประเมินลงในบัญชีของคุณเรียบร้อยแล้ว');
+            setTimeout(() => setSyncNotice(null), 4000);
+          } catch (fireErr) {
+            console.error('Failed to save submission to Firestore:', fireErr);
+          }
+        } else {
+          // If guest or not signed in, show subtle prompt
+          setSyncNotice('ผลการตรวจพร้อมแล้ว! เข้าสู่ระบบเพื่อบันทึกประวัติถาวร');
+          setTimeout(() => setSyncNotice(null), 6000);
+        }
+
+        setCurrentAssessment(newResult);
+        setSubmissions((prev) => [newResult, ...prev]);
         setActiveTab('assessment');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -112,44 +205,87 @@ export default function App() {
   };
 
   const handleSaveToVocabulary = async (word: string, meaning: string, example: string) => {
-    try {
-      const res = await fetch('/api/vocabulary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          word,
-          meaning_th: meaning,
-          example_sentence: example,
-          cefr_level: selectedTask.cefr_level,
-        }),
-      });
-      const data = await res.json();
-      if (data.item) {
-        setVocabulary((prev) => [data.item, ...prev]);
+    const newItem: VocabularyItem = {
+      id: `vocab-${Date.now()}`,
+      word,
+      meaning_th: meaning,
+      example_sentence: example,
+      example_translation_th: '',
+      cefr_level: selectedTask.cefr_level,
+      created_at: new Date().toISOString(),
+      part_of_speech: 'Noun',
+    };
+
+    setVocabulary((prev) => [newItem, ...prev]);
+
+    if (user) {
+      try {
+        await saveUserVocabulary(user.uid, {
+          id: newItem.id,
+          userId: user.uid,
+          word: newItem.word,
+          meaning_th: newItem.meaning_th,
+          part_of_speech: newItem.part_of_speech,
+          example_sentence: newItem.example_sentence,
+          cefr_level: newItem.cefr_level,
+          created_at: newItem.created_at,
+        });
+      } catch (err) {
+        console.warn('Failed to save vocabulary to Firestore:', err);
       }
-    } catch (e) {
-      console.warn('Save vocabulary error:', e);
     }
   };
 
   const handleDeleteVocabulary = async (id: string) => {
+    setVocabulary((prev) => prev.filter((v) => v.id !== id));
+    if (user) {
+      try {
+        await deleteUserVocabulary(user.uid, id);
+      } catch (err) {
+        console.warn('Failed to delete vocabulary in Firestore:', err);
+      }
+    }
+  };
+
+  const handleSignOut = async () => {
     try {
-      await fetch(`/api/vocabulary/${id}`, { method: 'DELETE' });
-      setVocabulary((prev) => prev.filter((v) => v.id !== id));
-    } catch (e) {
-      console.warn('Delete vocabulary error:', e);
+      await logOut();
+      setUser(null);
+      setSubmissions([]);
+      setCurrentAssessment(null);
+      setActiveTab('dashboard');
+    } catch (err) {
+      console.error('Sign out error:', err);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
-      {/* Top Navigation */}
+      {/* Top Navigation with Auth Profile */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onNewWriting={() => handleStartWriting()}
         submissionCount={submissions.length}
+        user={user}
+        onOpenAuth={() => setShowAuthModal(true)}
+        onSignOut={handleSignOut}
       />
+
+      {/* Sync/Status notification banner */}
+      {syncNotice && (
+        <div className="bg-blue-600 text-white text-xs font-semibold px-4 py-2.5 text-center flex items-center justify-center gap-2 shadow-xs transition-all animate-in slide-in-from-top duration-200">
+          <span>{syncNotice}</span>
+          {!user && (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="underline hover:text-blue-100 font-bold ml-2 cursor-pointer"
+            >
+              เข้าสู่ระบบเลย
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
@@ -176,6 +312,7 @@ export default function App() {
             tasks={tasks}
             selectedTask={selectedTask}
             onSelectTask={setSelectedTask}
+            onRollRandomTask={handleRollRandomTask}
             onSubmit={handleSubmitWriting}
             isSubmitting={isSubmitting}
           />
@@ -207,6 +344,20 @@ export default function App() {
                 created_at: new Date().toISOString(),
               };
               setVocabulary((prev) => [fullItem, ...prev]);
+              if (user) {
+                saveUserVocabulary(user.uid, {
+                  id: fullItem.id,
+                  userId: user.uid,
+                  word: fullItem.word,
+                  meaning_th: fullItem.meaning_th,
+                  part_of_speech: fullItem.part_of_speech,
+                  article: fullItem.article,
+                  example_sentence: fullItem.example_sentence,
+                  example_translation_th: fullItem.example_translation_th,
+                  cefr_level: fullItem.cefr_level,
+                  created_at: fullItem.created_at,
+                }).catch((e) => console.warn('Vocab save err:', e));
+              }
             }}
             onDeleteWord={handleDeleteVocabulary}
           />
@@ -221,7 +372,28 @@ export default function App() {
         )}
 
         {activeTab === 'rubric' && <RubricView />}
+
+        {activeTab === 'auth' && (
+          <AuthView
+            onSuccess={() => {
+              setActiveTab('dashboard');
+            }}
+          />
+        )}
       </main>
+
+      {/* Auth Modal when triggered via Navbar or actions */}
+      {showAuthModal && (
+        <AuthView
+          isModal={true}
+          onSuccess={() => {
+            setShowAuthModal(false);
+          }}
+          onCancel={() => {
+            setShowAuthModal(false);
+          }}
+        />
+      )}
 
       {/* Academic Footer */}
       <Footer />

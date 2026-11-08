@@ -1,5 +1,5 @@
 export type CEFRLevel = 'B1' | 'B2' | 'C1';
-export type ExtendedCEFR = 'B1' | 'B1+' | 'B2' | 'B2+' | 'C1' | 'C1+';
+export type ExtendedCEFR = 'A1' | 'A2' | 'A2+' | 'B1' | 'B1+' | 'B2' | 'B2+' | 'C1' | 'C1+';
 export type Grade = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
 export type TaskCategory = 

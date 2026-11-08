@@ -14,6 +14,7 @@ import {
   RUBRIC_WEIGHTS,
 } from './src/utils/scoring';
 import { AssessmentResult, AssessmentError, CategoryScoreItem, ExtendedCEFR, WritingTask } from './src/types';
+import { evaluateTextLinguistically } from './src/utils/germanEvaluator';
 
 dotenv.config();
 
@@ -49,331 +50,11 @@ function generateDeterministicAssessment(
   task: WritingTask,
   originalText: string
 ): AssessmentResult {
-  const wordCount = countGermanWords(originalText);
-  const errors: AssessmentError[] = [];
-
-  // Common pattern checks for German learners
-  // 1. "weil ... [verb] nicht am Ende"
-  const weilRegex = /\bweil\s+([a-zA-ZäöüÄÖÜß]+)\s+(ist|hat|kann|muss|will|soll|sind|haben|können|müssen)\b/gi;
-  let match;
-  while ((match = weilRegex.exec(originalText)) !== null) {
-    errors.push({
-      id: `ERR-${errors.length + 1}`,
-      category: 'GRAMMAR',
-      subcategory: 'WORD_ORDER',
-      original_text: match[0],
-      corrected_text: `weil ${match[1]} ... ${match[2]}`,
-      explanation_th: 'หลังคำเชื่อม weil (อนุประโยค Nebensatz) กริยาที่ผันแล้วต้องอยู่ตำแหน่งท้ายสุดของประโยคเสมอ',
-      rule: 'Verbletztstellung im Nebensatz',
-      severity: 'major',
-      confidence: 0.98,
-      start_offset: match.index,
-      end_offset: match.index + match[0].length,
-      examples: [
-        {
-          german: 'Er bleibt zu Hause, weil er krank ist.',
-          thai: 'เขาอยู่บ้านเพราะเขาป่วย (ist อยู่ท้ายสุด)',
-        },
-      ],
-    });
-  }
-
-  // 2. "obwohl ich bin"
-  const obwohlRegex = /\bobwohl\s+([a-zA-ZäöüÄÖÜß]+)\s+(bin|ist|habe|hat|kann|muss)\b/gi;
-  while ((match = obwohlRegex.exec(originalText)) !== null) {
-    errors.push({
-      id: `ERR-${errors.length + 1}`,
-      category: 'GRAMMAR',
-      subcategory: 'WORD_ORDER',
-      original_text: match[0],
-      corrected_text: `obwohl ${match[1]} ... ${match[2]}`,
-      explanation_th: 'หลังคำเชื่อม obwohl กริยาแท้ต้องถูกย้ายไปไว้ท้ายสุดของอนุประโยค',
-      rule: 'Subordinate Clause Word Order',
-      severity: 'major',
-      confidence: 0.99,
-      start_offset: match.index,
-      end_offset: match.index + match[0].length,
-      examples: [
-        {
-          german: 'Obwohl es regnet, gehe ich spazieren.',
-          thai: 'แม้ฝนจะตก ฉันก็ยังไปเดินเล่น',
-        },
-      ],
-    });
-  }
-
-  // 3. "Außerdem man kann" (Inversion missing)
-  const ausserdemRegex = /\baußerdem\s+([a-zA-ZäöüÄÖÜß]+)\s+(kann|muss|soll|ist|hat|wird)\b/gi;
-  while ((match = ausserdemRegex.exec(originalText)) !== null) {
-    errors.push({
-      id: `ERR-${errors.length + 1}`,
-      category: 'GRAMMAR',
-      subcategory: 'WORD_ORDER',
-      original_text: match[0],
-      corrected_text: `außerdem ${match[2]} ${match[1]}`,
-      explanation_th: 'หลังคำเชื่อมกริยาวิเศษณ์ außerdem กริยาต้องอยู่ตำแหน่งที่ 2 ทันที (Inversion)',
-      rule: 'Inversion nach Adverbialkonnektoren',
-      severity: 'major',
-      confidence: 0.95,
-      start_offset: match.index,
-      end_offset: match.index + match[0].length,
-      examples: [
-        {
-          german: 'Außerdem kann man neue Kontakte knüpfen.',
-          thai: 'นอกจากนี้ผู้คนยังสามารถสร้างมิตรภาพใหม่ ๆ ได้',
-        },
-      ],
-    });
-  }
-
-  // 4. "zu soziale Isolation" -> "zu sozialer Isolation"
-  const zuSozialeRegex = /\bzu\s+soziale\s+Isolation\b/gi;
-  while ((match = zuSozialeRegex.exec(originalText)) !== null) {
-    errors.push({
-      id: `ERR-${errors.length + 1}`,
-      category: 'GRAMMAR',
-      subcategory: 'KASUS',
-      original_text: match[0],
-      corrected_text: 'zu sozialer Isolation',
-      explanation_th: 'zu บังคับ Dativ เสมอ คำนาม die Isolation (เพศหญิง) ทำให้คุณศัพท์ลงท้ายด้วย -er',
-      rule: 'Dativ feminin bei Adjektivdeklination',
-      severity: 'major',
-      confidence: 0.97,
-      start_offset: match.index,
-      end_offset: match.index + match[0].length,
-      examples: [
-        {
-          german: 'Das führt zu sozialer Isolation.',
-          thai: 'สิ่งนี้นำไปสู่การแยกตัวโดดเดี่ยวทางสังคม',
-        },
-      ],
-    });
-  }
-
-  // 5. "am Besten" -> "am besten"
-  const amBestenRegex = /\bam\s+Besten\b/g;
-  while ((match = amBestenRegex.exec(originalText)) !== null) {
-    errors.push({
-      id: `ERR-${errors.length + 1}`,
-      category: 'MECHANICS',
-      subcategory: 'CAPITALIZATION',
-      original_text: match[0],
-      corrected_text: 'am besten',
-      explanation_th: 'am besten (ขั้นสุดของ gut) ต้องเขียนด้วยอักษรตัวพิมพ์เล็ก เว้นแต่จะทำหน้าที่เป็นคำนามแท้',
-      rule: 'Groß- und Kleinschreibung beim Superlativ',
-      severity: 'minor',
-      confidence: 0.96,
-      start_offset: match.index,
-      end_offset: match.index + match[0].length,
-      examples: [
-        {
-          german: 'Diese Lösung ist am besten.',
-          thai: 'วิธีแก้ปัญหานี้ดีที่สุด',
-        },
-      ],
-    });
-  }
-
-  // 6. "in ein traditionelles Restaurant gegessen" -> "in einem..."
-  const inEinRestRegex = /\bin\s+ein\s+traditionelles\s+Restaurant\s+gegessen\b/gi;
-  while ((match = inEinRestRegex.exec(originalText)) !== null) {
-    errors.push({
-      id: `ERR-${errors.length + 1}`,
-      category: 'GRAMMAR',
-      subcategory: 'KASUS',
-      original_text: match[0],
-      corrected_text: 'in einem traditionellen Restaurant gegessen',
-      explanation_th: 'essen in ... ตอบคำถาม Wo? (ทานที่ไหน) ต้องใช้ Dativ (das Restaurant -> in einem traditionellen Restaurant)',
-      rule: 'Wechselpräposition Wo? + Dativ',
-      severity: 'major',
-      confidence: 0.98,
-      start_offset: match.index,
-      end_offset: match.index + match[0].length,
-      examples: [
-        {
-          german: 'Wir haben in einem gemütlichen Café gesessen.',
-          thai: 'พวกเราได้นั่งในคาเฟ่ที่อบอุ่นแห่งหนึ่ง',
-        },
-      ],
-    });
-  }
-
-  // Deduce category scores based on length, grammar defects, and structure
-  const lengthRatio = Math.min(1, wordCount / Math.max(1, task.min_words));
-  const grammarDeduction = Math.min(8, errors.filter((e) => e.category === 'GRAMMAR').length * 2.5);
-  const mechanicsDeduction = Math.min(3, errors.filter((e) => e.category === 'MECHANICS').length * 1.5);
-
-  const taskScore = Math.max(8, Math.round(RUBRIC_WEIGHTS.task_fulfillment * (0.8 + 0.2 * lengthRatio)));
-  const contentScore = Math.max(6, Math.round(RUBRIC_WEIGHTS.content_development * (0.85 + 0.15 * lengthRatio)));
-  const vocabScore = Math.max(8, Math.round(RUBRIC_WEIGHTS.vocabulary * 0.85));
-  const grammarScore = Math.max(6, Math.round(RUBRIC_WEIGHTS.grammar - grammarDeduction));
-  const cohesionScore = Math.max(6, Math.round(RUBRIC_WEIGHTS.cohesion * 0.85));
-  const registerScore = Math.max(2, Math.round(RUBRIC_WEIGHTS.register * 0.8));
-  const mechanicsScore = Math.max(1, Math.round(RUBRIC_WEIGHTS.mechanics - mechanicsDeduction));
-
-  const rawCategories: CategoryScoreItem[] = [
-    {
-      category: 'task_fulfillment',
-      label_de: 'Aufgabenbewältigung',
-      label_en: 'Task Fulfillment',
-      score: taskScore,
-      max_score: RUBRIC_WEIGHTS.task_fulfillment,
-      feedback_th: 'ตอบประเด็นและเงื่อนไขของโจทย์ได้ครบถ้วน ชัดเจน และตรงประเด็น',
-    },
-    {
-      category: 'content_development',
-      label_de: 'Inhalt & Entwicklung',
-      label_en: 'Content Development',
-      score: contentScore,
-      max_score: RUBRIC_WEIGHTS.content_development,
-      feedback_th: 'เนื้อหามีความสมเหตุสมผล มีการยกตัวอย่างประกอบที่ดี แต่สามารถขยายเหตุผลเชิงลึกได้อีก',
-    },
-    {
-      category: 'vocabulary',
-      label_de: 'Wortschatz',
-      label_en: 'Vocabulary',
-      score: vocabScore,
-      max_score: RUBRIC_WEIGHTS.vocabulary,
-      feedback_th: 'คลังคำศัพท์เหมาะสมกับระดับ B2 มีการเลือกใช้คำศัพท์ที่สื่อความหมายได้ดี',
-    },
-    {
-      category: 'grammar',
-      label_de: 'Grammatik',
-      label_en: 'Grammar',
-      score: grammarScore,
-      max_score: RUBRIC_WEIGHTS.grammar,
-      feedback_th: errors.length > 0
-        ? `พบข้อผิดพลาดด้านตำแหน่งคำในอนุประโยค (Nebensätze) และการก (Kasus) ${errors.length} จุดที่ควรปรับปรุง`
-        : 'ควบคุมไวยากรณ์ได้ถูกต้องเป็นอย่างดีในโครงสร้างหลัก',
-    },
-    {
-      category: 'cohesion',
-      label_de: 'Kohärenz & Kohäsion',
-      label_en: 'Cohesion',
-      score: cohesionScore,
-      max_score: RUBRIC_WEIGHTS.cohesion,
-      feedback_th: 'ลำดับย่อหน้าและการเชื่อมโยงความคิดมีความต่อเนื่อง ใช้คำเชื่อมได้เหมาะสม',
-    },
-    {
-      category: 'register',
-      label_de: 'Register & Stil',
-      label_en: 'Register & Style',
-      score: registerScore,
-      max_score: RUBRIC_WEIGHTS.register,
-      feedback_th: 'ระดับภาษาและโทนเสียงเหมาะสมกับรูปแบบข้อความและกลุ่มผู้อ่าน',
-    },
-    {
-      category: 'mechanics',
-      label_de: 'Rechtschreibung',
-      label_en: 'Mechanics',
-      score: mechanicsScore,
-      max_score: RUBRIC_WEIGHTS.mechanics,
-      feedback_th: 'การสะกดคำและการใส่เครื่องหมายวรรคตอนถูกต้องเป็นส่วนใหญ่',
-    },
-  ];
-
-  const calculated = calculateTotalScore(rawCategories);
-
-  // Generate improved versions
-  let correctedVersion = originalText;
-  errors.forEach((err) => {
-    correctedVersion = correctedVersion.replace(err.original_text, err.corrected_text);
-  });
-
-  const b2Improved = `Heutzutage gewinnt das Thema Homeoffice zunehmend an gesellschaftlicher Relevanz. Zahlreiche Unternehmen ermöglichen ihren Beschäftigten mittlerweile das Arbeiten von zu Hause aus. In diesem Beitrag möchte ich differenziert zu dieser Entwicklung Stellung beziehen.
-
-Einerseits bietet die Telearbeit beachtliche Vorzüge: Man spart wertvolle Pendelzeit, da der tägliche Berufsverkehr entfällt. Zudem kann man sich die Arbeitszeiten deutlich flexibler einteilen. Obwohl man in den eigenen vier Wänden oft konzentrierter arbeitet, existieren gleichermaßen spürbare Nachteile.
-
-Andererseits birgt das dauerhafte Arbeiten am heimischen Schreibtisch das Risiko sozialer Isolation. Der spontane Austausch mit Kolleginnen und Kollegen kommt häufig zu kurz, und die Grenze zwischen Arbeitszeit und Feierabend verschwimmt. Mein Bruder beispielsweise arbeitet seit zwei Jahren im Homeoffice und klagt über Bewegungsmangel sowie ein Gefühl der Vereinsamung.
-
-Zusammenfassend lässt sich festhalten, dass Homeoffice sowohl Vor- als auch Nachteile aufweist. Meines Erachtens stellt ein hybrides Modell mit zwei Tagen Präsenzpflicht und drei Tagen Heimarbeit die ausgewogenste Lösung dar.`;
-
-  const c1Model = `Die fortschreitende Etablierung ortsunabhängiger Arbeitsformen markiert einen fundamentalen Wandel der modernen Berufs- und Lebenswelt. Während Befürworter die gesteigerte Autonomie und verbesserte Vereinbarkeit von Familie und Beruf hervorheben, warnen Soziologen und Arbeitspsychologen vor einer schleichenden Entgrenzung der Erwerbstätigkeit.
-
-Zweifelsohne vermag das Homeoffice die individuelle Zeiteffizienz signifikant zu optimieren: Durch den Wegfall zeitraubender Arbeitswege werden kognitive Ressourcen frei, die sich positiv auf die Bewältigung komplexer Arbeitsaufträge auswirken. Diesem Autonomiegewinn stehen jedoch gravierende strukturelle Risiken gegenüber: Die sukzessive Erosion persönlicher Kommunikationskanäle führt nicht selten zu sozialer Entfremdung und beeinträchtigt die kollektive Innovationskraft eines Unternehmens.
-
-Vor diesem Hintergrund erscheint eine polarisierende Debatte unzureichend. Anstelle eines starren Festhaltens an Extrempositionen bedarf es zukunftsfähiger, hybrider Arbeitszeitmodelle, die individuelle Flexibilität mit dem unerlässlichen Bedürfnis nach institutioneller Einbindung und sozialem Diskurs harmonisieren.`;
-
-  const profile = {
-    task_fulfillment: (task.cefr_level === 'C1' ? 'B2+' : task.cefr_level) as ExtendedCEFR,
-    content_development: 'B2' as ExtendedCEFR,
-    vocabulary: 'B2' as ExtendedCEFR,
-    grammar: (errors.length > 2 ? 'B1+' : 'B2') as ExtendedCEFR,
-    cohesion: 'B2' as ExtendedCEFR,
-    register: 'B2' as ExtendedCEFR,
-    mechanics: 'B2' as ExtendedCEFR,
-  };
-
-  const cefrEval = deriveCefrSummary(task.cefr_level, wordCount, task.min_words, profile);
-
-  return {
-    id: `assess-${Date.now()}`,
-    submission_id: `sub-${Date.now()}`,
-    task_id: task.id,
-    task_title: task.title,
-    task_level: task.cefr_level,
-    task_category: task.category,
-    original_text: originalText,
-    word_count: wordCount,
-    total_score: calculated.total,
-    grade: calculated.grade,
-    cefr_estimate: cefrEval.estimate,
-    cefr_confidence: cefrEval.confidence,
-    cefr_summary_th: cefrEval.summaryTh,
-    main_weakness_th: errors.some((e) => e.subcategory === 'WORD_ORDER')
-      ? 'ตำแหน่งคำในอนุประโยค (Nebensätze) และการสลับประธานกริยา (Inversion)'
-      : 'ความหลากหลายของโครงสร้างประโยคและการก (Kasus)',
-    main_strength_th: 'การจัดลำดับเนื้อหาเป็นระบบชัดเจนและตอบโจทย์ได้ครบทุกข้อกำหนด',
-    cefr_profile: profile,
-    category_scores: calculated.verifiedScores,
-    errors,
-    strengths: [
-      'เข้าใจโจทย์และตอบคำถามได้ครบทุกประเด็น (Aufgabenbewältigung)',
-      'การจัดย่อหน้าและการวางเค้าโครงมีความชัดเจน อ่านง่าย (Gute Gliederung)',
-      'การใช้คำศัพท์พื้นฐานและสำนวนทั่วไปเหมาะสมกับบริบท',
-    ],
-    weaknesses: [
-      'ตำแหน่งกริยาในอนุประโยคหลังคำเชื่อม weil / obwohl ยังไม่ถูกต้องสม่ำเสมอ',
-      'การใช้คำเชื่อมส่วนใหญ่ยังเป็นคำเดี่ยว สามารถพัฒนาไปสู่ zweiteilige Konnektoren ได้',
-      'การกในวลีบุพบท (Wechselpräpositionen และ Dativ feminin) มีจุดที่คลาดเคลื่อน',
-    ],
-    writing_versions: {
-      corrected: correctedVersion,
-      b2_improved: b2Improved,
-      c1_model: c1Model,
-    },
-    learning_recommendations: [
-      {
-        topic: 'Nebensätze und Verbletztstellung',
-        priority: 'high',
-        reason_th: 'พบข้อผิดพลาดเรื่องตำแหน่งกริยาหลัง weil และ obwohl ในงานเขียน',
-        lesson_id: 'lesson-nebensaetze',
-        action_th: 'ทบทวนกฎกริยาอยู่ท้ายประโยคในอนุประโยคและทำแบบฝึกหัด 5 ข้อ',
-      },
-      {
-        topic: 'Zweiteilige Konnektoren (B2)',
-        priority: 'medium',
-        reason_th: 'เพื่อยกระดับคะแนน Kohärenz จากระดับ B1 สู่ B2 อย่างมีชั้นเชิง',
-        lesson_id: 'lesson-konnektoren-b2',
-        action_th: 'ฝึกใช้ zwar... aber และ nicht nur... sondern auch ในการแจกแจงข้อดี-ข้อเสีย',
-      },
-      {
-        topic: 'Kasus und Adjektivdeklination',
-        priority: 'medium',
-        reason_th: 'มีจุดที่ใช้ Dativ และคำลงท้ายคุณศัพท์คลาดเคลื่อนในประโยคบุพบท',
-        lesson_id: 'lesson-adjektivendungen',
-        action_th: 'ทบทวนตาราง Adjektivendungen หลังคำบุพบท Dativ เช่น zu, mit, bei',
-      },
-    ],
-    rubric_version: '1.0',
-    created_at: new Date().toISOString(),
-  };
+  return evaluateTextLinguistically(task, originalText);
 }
 
-// Pre-populate with initial demonstration assessment
-submissionsStore.push(
-  generateDeterministicAssessment(SAMPLE_TASKS[0], SAMPLE_TASKS[0].preset_draft || '')
-);
+// User submissions store starts completely clean without fake mock assessments
+// Submissions are strictly added when the real user submits essays
 
 // REST API Endpoints
 
@@ -398,6 +79,18 @@ app.get('/api/tasks', (req: Request, res: Response) => {
     filtered = filtered.filter((t) => t.category === category);
   }
   res.json({ tasks: filtered });
+});
+
+// Randomly draw a standardized central exam task
+app.get('/api/tasks/random', (req: Request, res: Response) => {
+  const { level } = req.query;
+  let pool = [...tasksStore];
+  if (level && typeof level === 'string') {
+    pool = pool.filter((t) => t.cefr_level === level.toUpperCase());
+  }
+  if (pool.length === 0) pool = [...tasksStore];
+  const randomIndex = Math.floor(Math.random() * pool.length);
+  res.json({ task: pool[randomIndex] });
 });
 
 app.get('/api/tasks/:id', (req: Request, res: Response) => {
@@ -549,7 +242,7 @@ ${original_text}
         });
 
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Gemini latency fallback: switching to academic evaluation engine')), 4000)
+          setTimeout(() => reject(new Error('Gemini latency fallback: switching to academic evaluation engine')), 15000)
         );
 
         const response: any = await Promise.race([geminiPromise, timeoutPromise]);

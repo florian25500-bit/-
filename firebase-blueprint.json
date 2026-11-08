@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "lastLoginAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["uid", "createdAt"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "German writing assessment submission and evaluation record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "topic": { "type": "string", "maxLength": 300 },
+        "level": { "type": "string", "maxLength": 10 },
+        "targetWordCount": { "type": "number" },
+        "actualWordCount": { "type": "number" },
+        "overallScore": { "type": "number" },
+        "text": { "type": "string", "maxLength": 10000 },
+        "feedback": { "type": "string", "maxLength": 5000 },
+        "breakdown": { "type": "object" },
+        "detailedErrors": { "type": "array" },
+        "improvedVersion": { "type": "string", "maxLength": 10000 },
+        "submittedAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "userId", "topic", "level", "overallScore", "text", "submittedAt"]
+    },
+    "VocabularyItem": {
+      "title": "VocabularyItem",
+      "description": "German vocabulary item saved by the user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "german": { "type": "string", "maxLength": 200 },
+        "thai": { "type": "string", "maxLength": 300 },
+        "partOfSpeech": { "type": "string", "maxLength": 50 },
+        "example": { "type": "string", "maxLength": 500 },
+        "level": { "type": "string", "maxLength": 10 },
+        "savedAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "userId", "german", "thai", "savedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile document"
+    },
+    "/users/{userId}/submissions/{submissionId}": {
+      "schema": "Submission",
+      "description": "User essay submissions and CEFR evaluations"
+    },
+    "/users/{userId}/vocabulary/{vocabId}": {
+      "schema": "VocabularyItem",
+      "description": "User personal German vocabulary bank"
+    }
+  }
+}

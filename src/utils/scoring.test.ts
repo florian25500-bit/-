@@ -87,3 +87,21 @@ test('deriveCefrSummary computes B2 with high confidence when B2 skills dominate
   assert.equal(summary.estimate, 'B2');
   assert.equal(summary.confidence, 'high');
 });
+
+import { evaluateTextLinguistically } from './germanEvaluator';
+import { SAMPLE_TASKS } from '../data/sampleTasks';
+
+test('evaluateTextLinguistically gives Grade F and A1 to very short text', () => {
+  const shortResult = evaluateTextLinguistically(SAMPLE_TASKS[0], 'Hallo wie geht es dir');
+  assert.equal(shortResult.grade, 'F');
+  assert.equal(shortResult.cefr_estimate, 'A1');
+  assert.ok(shortResult.total_score < 25, 'Score should be below 25 for 5 words on a B2 180-word task');
+});
+
+test('evaluateTextLinguistically detects Nebensatz verb order and noun capitalization errors', () => {
+  const textWithErrors = `Ich bin zu Hause geblieben, weil ich habe keine zeit gehabt. Außerdem ich bin sehr müde.`;
+  const result = evaluateTextLinguistically(SAMPLE_TASKS[0], textWithErrors);
+  const nebensatzErr = result.errors.find((e) => e.rule.includes('Nebensatz'));
+  assert.ok(nebensatzErr, 'Should detect Nebensatz word order error');
+  assert.equal(nebensatzErr?.category, 'GRAMMAR');
+});
