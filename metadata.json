@@ -1,0 +1,6 @@
+{
+  "name": "DeutschSchreiben AI",
+  "description": "CEFR-aligned German writing assessment and learning platform for B1, B2, and C1 with rigorous 100-point rubric, error analysis, and progress tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
