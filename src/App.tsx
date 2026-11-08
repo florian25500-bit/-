@@ -135,11 +135,11 @@ export default function App() {
     setSelectedTask(pool[randomIndex]);
   };
 
-  const handleStartWriting = (task?: WritingTask) => {
+  const handleStartWriting = (task?: WritingTask, levelFilter?: string) => {
     if (task) {
       setSelectedTask(task);
     } else {
-      handleRollRandomTask();
+      handleRollRandomTask(levelFilter);
     }
     setActiveTab('editor');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -331,6 +331,7 @@ export default function App() {
           <LearningCenterView
             lessons={lessons}
             activeLessonId={activeLessonId}
+            onStartWriting={(lvl) => handleStartWriting(undefined, lvl)}
           />
         )}
 

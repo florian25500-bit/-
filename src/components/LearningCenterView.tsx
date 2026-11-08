@@ -16,11 +16,13 @@ interface LearningCenterViewProps {
   lessons: GrammarLesson[];
   activeLessonId?: string | null;
   onSelectLesson?: (id: string) => void;
+  onStartWriting?: (level?: string) => void;
 }
 
 export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
   lessons,
   activeLessonId,
+  onStartWriting,
 }) => {
   const [selectedId, setSelectedId] = useState<string>(
     activeLessonId || (lessons[0]?.id ?? 'lesson-nebensaetze')
@@ -118,18 +120,31 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
         <section className="lg:col-span-8 space-y-6">
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
             {/* Title & Badge */}
-            <div className="border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  Niveau {selectedLesson.cefr_level}
-                </span>
-                <span className="text-xs text-slate-400 font-mono">
-                  {selectedLesson.german_title}
-                </span>
+            <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                    Niveau {selectedLesson.cefr_level}
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    {selectedLesson.german_title}
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                  {selectedLesson.title}
+                </h2>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                {selectedLesson.title}
-              </h2>
+
+              {onStartWriting && (
+                <button
+                  onClick={() => onStartWriting(selectedLesson.cefr_level)}
+                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                  title={`ทำข้อสอบระดับ ${selectedLesson.cefr_level}`}
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>ฝึกทำข้อสอบระดับ {selectedLesson.cefr_level}</span>
+                </button>
+              )}
             </div>
 
             {/* Thai Detailed Explanation */}

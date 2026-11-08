@@ -40,6 +40,18 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [savedVocabId, setSavedVocabId] = useState<string | null>(null);
 
+  const getLessonIdForError = (err: AssessmentError): string => {
+    const text = `${err.rule} ${err.subcategory} ${err.category}`.toLowerCase();
+    if (text.includes('nebensatz') || text.includes('word_order')) return 'lesson-nebensaetze';
+    if (text.includes('inversion') || text.includes('konnektor') || text.includes('cohesion')) return 'lesson-konnektoren-b2';
+    if (text.includes('kasus') || text.includes('dativ') || text.includes('akkusativ')) return 'lesson-kasus';
+    if (text.includes('passiv')) return 'lesson-passiv';
+    if (text.includes('konjunktiv')) return 'lesson-konjunktiv-2';
+    if (text.includes('adjektiv') || text.includes('capitalization')) return 'lesson-adjektivendungen';
+    if (text.includes('nominal')) return 'lesson-nominalisierung';
+    return 'lesson-nebensaetze';
+  };
+
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopiedText(label);
@@ -96,7 +108,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
 
   // Render text with interactive highlighted spans
   const renderHighlightedText = () => {
-    const raw = assessment.original_text;
+    const raw = assessment.original_text.replace(/\\n/g, '\n');
     if (assessment.errors.length === 0) {
       return <p className="leading-relaxed whitespace-pre-wrap font-sans text-slate-800">{raw}</p>;
     }
@@ -582,7 +594,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   </button>
 
                   <button
-                    onClick={() => onOpenLesson('lesson-nebensaetze')}
+                    onClick={() => onOpenLesson(getLessonIdForError(selectedError))}
                     className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     <BookOpen className="w-3.5 h-3.5" />

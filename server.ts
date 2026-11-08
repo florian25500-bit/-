@@ -90,7 +90,11 @@ app.get('/api/tasks/random', (req: Request, res: Response) => {
   }
   if (pool.length === 0) pool = [...tasksStore];
   const randomIndex = Math.floor(Math.random() * pool.length);
-  res.json({ task: pool[randomIndex] });
+  res.json({
+    task: pool[randomIndex],
+    total_in_pool: pool.length,
+    total_all: tasksStore.length,
+  });
 });
 
 app.get('/api/tasks/:id', (req: Request, res: Response) => {
@@ -242,7 +246,7 @@ ${original_text}
         });
 
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Gemini latency fallback: switching to academic evaluation engine')), 15000)
+          setTimeout(() => reject(new Error('Gemini latency fallback: switching to academic evaluation engine')), 4500)
         );
 
         const response: any = await Promise.race([geminiPromise, timeoutPromise]);

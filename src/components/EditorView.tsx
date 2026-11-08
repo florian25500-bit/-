@@ -190,8 +190,12 @@ export const EditorView: React.FC<EditorViewProps> = ({
                 {selectedTask.category}
               </span>
 
-              <span className="text-slate-400 text-xs font-mono">
+              <span className="text-slate-400 text-xs font-mono font-semibold">
                 {selectedTask.task_id}
+              </span>
+
+              <span className="text-[11px] text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200/50">
+                คลังข้อสอบกลาง 504 ข้อ (สุ่ม 168 ข้อ/ระดับ)
               </span>
             </div>
 
@@ -199,38 +203,43 @@ export const EditorView: React.FC<EditorViewProps> = ({
               {selectedTask.title}
             </h1>
             <p className="text-xs text-slate-500 leading-relaxed">
-              โจทย์ในการทำข้อสอบเป็นโจทย์กลางที่ถูกสุ่มขึ้นมาตามมาตรฐานสากล ระบบจะประเมินคะแนน CEFR จริง 100 คะแนนจากสิ่งที่คุณเขียน
+              โจทย์ในการทำข้อสอบเป็นโจทย์กลางมาตรฐานสากล (Goethe/telc) สุ่มจากคลัง 504 ข้อเท่ากันทุกระดับ (B1: 168, B2: 168, C1: 168) ระบบจะประเมินคะแนน CEFR จริง 100 คะแนนจากสิ่งที่คุณเขียนตามเกณฑ์ 7 หมวดอย่างเที่ยงตรง
             </p>
           </div>
 
           {/* Random Task Draw Controller */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
             <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
-              {['ALL', 'B1', 'B2', 'C1'].map((lvl) => (
+              {[
+                { id: 'ALL', label: 'ทั้งหมด (504)' },
+                { id: 'B1', label: 'B1 (168)' },
+                { id: 'B2', label: 'B2 (168)' },
+                { id: 'C1', label: 'C1 (168)' },
+              ].map((lvl) => (
                 <button
-                  key={lvl}
+                  key={lvl.id}
                   onClick={() => {
-                    setSelectedLevelFilter(lvl);
-                    onRollRandomTask(lvl === 'ALL' ? undefined : lvl);
+                    setSelectedLevelFilter(lvl.id);
+                    onRollRandomTask(lvl.id === 'ALL' ? undefined : lvl.id);
                   }}
                   className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                    selectedLevelFilter === lvl
+                    selectedLevelFilter === lvl.id
                       ? 'bg-white text-blue-700 shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
-                  title={`สุ่มโจทย์เฉพาะระดับ ${lvl}`}
+                  title={`สุ่มโจทย์เฉพาะระดับ ${lvl.id}`}
                 >
-                  {lvl === 'ALL' ? 'ทุกระดับ' : lvl}
+                  {lvl.label}
                 </button>
               ))}
             </div>
 
             <button
               onClick={() => onRollRandomTask(selectedLevelFilter === 'ALL' ? undefined : selectedLevelFilter)}
-              className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
               title="สุ่มโจทย์ข้อสอบกลางชุดใหม่"
             >
-              <Shuffle className="w-3.5 h-3.5 text-blue-600" />
+              <Shuffle className="w-3.5 h-3.5" />
               <span>สุ่มโจทย์ใหม่ (Draw Task)</span>
             </button>
 
