@@ -5,10 +5,10 @@ import {
   XCircle,
   Award,
   Sparkles,
-  HelpCircle,
   ArrowRight,
   RotateCcw,
-  Layers,
+  Check,
+  ChevronRight,
 } from 'lucide-react';
 import { GrammarLesson } from '../types';
 
@@ -54,28 +54,28 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 py-4">
-      {/* Header */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
-        <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+    <div className="space-y-6 py-6">
+      {/* Header Banner */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs">
+        <span className="text-xs font-bold uppercase tracking-wider text-blue-700">
           Deutsches Grammatikzentrum
         </span>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 tracking-tight">
           คลังความรู้ไวยากรณ์ภาษาเยอรมันเชิงวิชาการ (Learning Center)
         </h1>
-        <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-          บทเรียนไวยากรณ์ระดับ B1–C1 ออกแบบมาเพื่ออธิบายจุดที่ผู้เรียนชาวไทยมักทำผิดบ่อย พร้อมตัวอย่างประโยคเปรียบเทียบถูก-ผิด และแบบฝึกหัดประเมินตนเอง
+        <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl leading-relaxed">
+          บทเรียนไวยากรณ์ระดับ B1–C1 ที่เน้นจุดที่ผู้เรียนชาวไทยมักทำผิดบ่อย พร้อมตัวอย่างประโยคเปรียบเทียบถูก-ผิด และแบบฝึกหัดประเมินตนเอง
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left: Lessons List (4 cols) */}
-        <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-2">
-          <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-slate-400">
+        <aside className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-2">
+          <div className="px-2 py-1 text-xs font-bold text-slate-700">
             เลือกหัวข้อบทเรียน ({lessons.length} บทเรียน):
           </div>
 
-          <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-[640px] overflow-y-auto pr-1 no-scrollbar">
             {lessons.map((lesson) => {
               const isSelected = lesson.id === selectedLesson.id;
               return (
@@ -84,18 +84,18 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                   onClick={() => handleSelectLesson(lesson.id)}
                   className={`p-3 rounded-xl cursor-pointer transition-all border ${
                     isSelected
-                      ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-900 dark:text-blue-200 shadow-xs'
-                      : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                      ? 'bg-blue-50/80 border-blue-300 text-blue-950 shadow-2xs font-medium'
+                      : 'border-transparent hover:bg-slate-50 text-slate-700 hover:border-slate-200/60'
                   }`}
                 >
                   <div className="flex items-center justify-between text-[11px] mb-1">
                     <span
-                      className={`px-1.5 py-0.2 rounded font-bold ${
+                      className={`px-1.5 py-0.2 rounded-md font-bold text-[10px] border ${
                         lesson.cefr_level === 'C1'
-                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                           : lesson.cefr_level === 'B2'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       }`}
                     >
                       {lesson.cefr_level}
@@ -112,22 +112,22 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
               );
             })}
           </div>
-        </div>
+        </aside>
 
         {/* Right: Lesson Details & Interactive Quiz (8 cols) */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
+        <section className="lg:col-span-8 space-y-6">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
             {/* Title & Badge */}
-            <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div className="border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                   Niveau {selectedLesson.cefr_level}
                 </span>
                 <span className="text-xs text-slate-400 font-mono">
                   {selectedLesson.german_title}
                 </span>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                 {selectedLesson.title}
               </h2>
             </div>
@@ -137,7 +137,7 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 คำอธิบายหลักการ (Erklärung):
               </h3>
-              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+              <p className="text-sm text-slate-700 leading-relaxed bg-slate-50/70 p-4 rounded-xl border border-slate-200/60 font-sans">
                 {selectedLesson.explanation_th}
               </p>
             </div>
@@ -151,34 +151,34 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                 {selectedLesson.rules.map((rule, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-xl text-xs text-slate-800 dark:text-slate-200 flex items-start gap-2"
+                    className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-xs text-slate-800 flex items-start gap-2.5"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                    <span>{rule}</span>
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{rule}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Examples: Correct vs Incorrect side-by-side or stacked */}
+            {/* Examples: Correct vs Incorrect side-by-side */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Correct examples */}
-              <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-xl p-4 space-y-3">
-                <h4 className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+              <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4 space-y-3">
+                <h4 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   <span>ตัวอย่างที่ถูกต้อง (Richtig)</span>
                 </h4>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {selectedLesson.correct_examples.map((ex, i) => (
-                    <div key={i} className="text-xs space-y-0.5 border-b border-emerald-100 dark:border-emerald-900/30 pb-2 last:border-none">
-                      <div className="font-semibold text-emerald-950 dark:text-emerald-200">
+                    <div key={i} className="text-xs space-y-0.5 border-b border-emerald-100 pb-2 last:border-none">
+                      <div className="font-semibold text-emerald-950">
                         {ex.german}
                       </div>
-                      <div className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80">
+                      <div className="text-[11px] text-emerald-800">
                         {ex.thai}
                       </div>
                       {ex.note && (
-                        <div className="text-[10px] text-emerald-700 dark:text-emerald-400 italic">
+                        <div className="text-[10px] text-emerald-700 italic pt-0.5">
                           💡 {ex.note}
                         </div>
                       )}
@@ -188,21 +188,21 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
               </div>
 
               {/* Incorrect examples with reasons */}
-              <div className="bg-red-50/50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-xl p-4 space-y-3">
-                <h4 className="text-xs font-bold text-red-800 dark:text-red-300 flex items-center gap-1.5">
-                  <XCircle className="w-4 h-4 text-red-600" />
+              <div className="bg-rose-50/50 border border-rose-200 rounded-xl p-4 space-y-3">
+                <h4 className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
+                  <XCircle className="w-4 h-4 text-rose-600" />
                   <span>ข้อผิดพลาดที่พบบ่อย (Falsch & Korrektur)</span>
                 </h4>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {selectedLesson.incorrect_examples.map((ex, i) => (
-                    <div key={i} className="text-xs space-y-1 border-b border-red-100 dark:border-red-900/30 pb-2 last:border-none">
-                      <div className="font-semibold text-red-950 dark:text-red-200 line-through">
+                    <div key={i} className="text-xs space-y-1 border-b border-rose-100 pb-2 last:border-none">
+                      <div className="font-semibold text-rose-950 line-through">
                         {ex.german}
                       </div>
-                      <div className="text-emerald-700 dark:text-emerald-300 font-bold">
+                      <div className="text-emerald-700 font-bold">
                         → {ex.correction}
                       </div>
-                      <div className="text-[10px] text-red-700 dark:text-red-300 leading-snug">
+                      <div className="text-[10px] text-rose-800 leading-snug">
                         เหตุผล: {ex.why_wrong_th}
                       </div>
                     </div>
@@ -212,14 +212,14 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
             </div>
 
             {/* Interactive Mini-Quiz */}
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+            <div className="pt-4 border-t border-slate-100 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <h3 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-amber-500" />
                     <span>แบบฝึกหัดทดสอบความเข้าใจ (Übungsaufgaben)</span>
                   </h3>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     ตอบคำถามด้านล่างเพื่อวัดความเข้าใจในหลักการของบทเรียนนี้
                   </p>
                 </div>
@@ -227,7 +227,7 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                 {showResults && (
                   <button
                     onClick={handleResetQuiz}
-                    className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1"
+                    className="text-xs text-blue-600 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>ทำใหม่อีกครั้ง</span>
@@ -243,34 +243,34 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                   return (
                     <div
                       key={qIdx}
-                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-3"
+                      className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
                     >
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                      <h4 className="text-xs font-bold text-slate-900">
                         ข้อที่ {qIdx + 1}: {q.question}
                       </h4>
 
                       <div className="space-y-1.5">
                         {q.options.map((opt, optIdx) => {
                           const isOptionSelected = selectedOpt === optIdx;
-                          let optStyle = 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200';
+                          let optStyle = 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50';
 
                           if (showResults) {
                             if (optIdx === q.correctIndex) {
-                              optStyle = 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-950 dark:text-emerald-200 font-bold';
+                              optStyle = 'border-emerald-500 bg-emerald-50 text-emerald-950 font-bold';
                             } else if (isOptionSelected && !isCorrect) {
-                              optStyle = 'border-red-500 bg-red-50 dark:bg-red-950/60 text-red-950 dark:text-red-200';
+                              optStyle = 'border-rose-400 bg-rose-50 text-rose-950';
                             }
                           } else if (isOptionSelected) {
-                            optStyle = 'border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-semibold ring-1 ring-blue-500';
+                            optStyle = 'border-blue-600 bg-blue-50 text-blue-900 font-semibold ring-1 ring-blue-500';
                           }
 
                           return (
                             <div
                               key={optIdx}
                               onClick={() => handleSelectOption(qIdx, optIdx)}
-                              className={`p-2.5 rounded-lg border text-xs cursor-pointer transition-all flex items-center gap-2 ${optStyle}`}
+                              className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center gap-2.5 ${optStyle}`}
                             >
-                              <span className="w-5 h-5 rounded-full border flex items-center justify-center font-bold text-[10px] shrink-0">
+                              <span className="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center font-bold text-[10px] shrink-0">
                                 {String.fromCharCode(65 + optIdx)}
                               </span>
                               <span className="leading-snug">{opt}</span>
@@ -281,13 +281,13 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
 
                       {showResults && (
                         <div
-                          className={`p-3 rounded-lg text-xs leading-relaxed ${
+                          className={`p-3 rounded-xl text-xs leading-relaxed ${
                             isCorrect
-                              ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200'
-                              : 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200'
+                              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-900 border border-amber-200'
                           }`}
                         >
-                          <div className="font-bold flex items-center gap-1.5 mb-0.5">
+                          <div className="font-bold flex items-center gap-1.5 mb-1">
                             {isCorrect ? (
                               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                             ) : (
@@ -307,14 +307,14 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                 <button
                   onClick={handleCheckQuiz}
                   disabled={Object.keys(userAnswers).length === 0}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs transition-colors shadow-sm"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
                 >
                   ตรวจคำตอบ (Check Answers)
                 </button>
               )}
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

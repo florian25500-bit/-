@@ -52,9 +52,6 @@ export default function App() {
         if (historyRes.status === 'fulfilled' && historyRes.value?.submissions?.length > 0) {
           setSubmissions(historyRes.value.submissions);
           setCurrentAssessment(historyRes.value.submissions[0]);
-        } else {
-          // Trigger a seed assessment so that Assessment Results & Dashboard have realistic initial data
-          triggerSeedAssessment();
         }
       } catch (err) {
         console.warn('Error loading backend data:', err);
@@ -63,27 +60,6 @@ export default function App() {
 
     loadData();
   }, []);
-
-  // Seed default demonstration assessment
-  const triggerSeedAssessment = async () => {
-    try {
-      const res = await fetch('/api/assess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          task_id: SAMPLE_TASKS[0].id,
-          original_text: SAMPLE_TASKS[0].preset_draft,
-        }),
-      });
-      const data = await res.json();
-      if (data.assessment) {
-        setSubmissions([data.assessment]);
-        setCurrentAssessment(data.assessment);
-      }
-    } catch (e) {
-      console.warn('Seed assessment fallback:', e);
-    }
-  };
 
   const handleStartWriting = (task?: WritingTask) => {
     if (task) {
@@ -166,7 +142,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* Top Navigation */}
       <Navbar
         activeTab={activeTab}

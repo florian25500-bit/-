@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   GraduationCap,
-  PenTool,
+  PenLine,
   LayoutDashboard,
   BookOpen,
   Bookmark,
@@ -23,181 +23,111 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNewWriting,
   submissionCount,
 }) => {
+  const navItems = [
+    { id: 'dashboard', label: 'แดชบอร์ด', subLabel: 'Dashboard', icon: LayoutDashboard },
+    { id: 'editor', label: 'ฝึกเขียนงาน', subLabel: 'Writing', icon: PenLine },
+    { id: 'learning', label: 'บทเรียนไวยากรณ์', subLabel: 'Grammar', icon: BookOpen },
+    { id: 'vocabulary', label: 'คลังคำศัพท์', subLabel: 'Vocab Bank', icon: Bookmark },
+    { id: 'history', label: 'ประวัติการส่ง', subLabel: 'History', icon: History, badge: submissionCount },
+    { id: 'rubric', label: 'เกณฑ์ 100 คะแนน', subLabel: 'Rubric', icon: FileCheck2 },
+  ];
+
   return (
-    <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-white shadow-md">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Brand Logo */}
+          {/* Brand Mark */}
           <div
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-3 cursor-pointer group select-none"
             onClick={() => setActiveTab('landing')}
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-800 flex items-center justify-center text-white shadow-inner font-bold border border-blue-400/30 group-hover:scale-105 transition-transform">
-              <GraduationCap className="w-6 h-6 text-amber-300" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-xs group-hover:shadow-md transition-all">
+              <GraduationCap className="w-5 h-5 text-amber-200" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-tight text-white">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-base tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
                   DeutschSchreiben
                 </span>
-                <span className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded">
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60 rounded-md">
                   AI
                 </span>
-                <span className="hidden lg:inline-block text-[10px] font-semibold text-slate-400 ml-1">
-                  B1–C1 CEFR
-                </span>
               </div>
-              <p className="text-[10px] text-slate-400 hidden sm:block">
-                Academic German Writing Assessment Platform
+              <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
+                ระบบประเมินงานเขียนภาษาเยอรมัน B1–C1 (CEFR)
               </p>
             </div>
           </div>
 
-          {/* Navigation Items */}
-          <nav className="hidden md:flex items-center gap-1">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'dashboard'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Dashboard</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('editor')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'editor'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <PenTool className="w-4 h-4" />
-              <span>Writing Practice</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('learning')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'learning'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>Grammar Lessons</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('vocabulary')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'vocabulary'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Bookmark className="w-4 h-4" />
-              <span>Vocabulary Bank</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 relative ${
-                activeTab === 'history'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <History className="w-4 h-4" />
-              <span>History</span>
-              {submissionCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 text-[10px] bg-blue-500 text-white rounded-full font-bold">
-                  {submissionCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('rubric')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'rubric'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <FileCheck2 className="w-4 h-4" />
-              <span>Rubric (100 Pkt.)</span>
-            </button>
+          {/* Desktop Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 relative ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-700 shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <span>{item.label}</span>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="ml-0.5 px-1.5 py-0.2 text-[10px] bg-blue-600 text-white rounded-full font-bold">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
 
-          {/* Right Action: Start Writing & Language Indicator */}
+          {/* Right Action Button: Start Writing */}
           <div className="flex items-center gap-3">
-            <div className="hidden lg:flex items-center text-xs text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded border border-slate-700">
-              <span className="text-emerald-400 font-semibold mr-1.5">●</span>
-              <span>คำอธิบาย: ภาษาไทย</span>
+            <div className="hidden xl:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>คำอธิบายภาษาไทย</span>
             </div>
 
             <button
               onClick={onNewWriting}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm px-4 py-2 rounded-lg shadow-sm transition-all flex items-center gap-2 hover:shadow-blue-500/25 active:scale-95"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-xs hover:shadow-md transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
             >
-              <PenTool className="w-4 h-4" />
-              <span className="hidden sm:inline">Neuer Text</span>
-              <span className="sm:hidden">Write</span>
+              <PenLine className="w-4 h-4" />
+              <span>เขียนงานใหม่</span>
             </button>
           </div>
         </div>
 
-        {/* Mobile Sub-Navigation Bar */}
-        <div className="md:hidden flex items-center justify-around py-2 border-t border-slate-800 text-xs">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`p-1.5 rounded flex flex-col items-center gap-1 ${
-              activeTab === 'dashboard' ? 'text-blue-400 font-semibold' : 'text-slate-400'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            <span>Dashboard</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('editor')}
-            className={`p-1.5 rounded flex flex-col items-center gap-1 ${
-              activeTab === 'editor' ? 'text-blue-400 font-semibold' : 'text-slate-400'
-            }`}
-          >
-            <PenTool className="w-4 h-4" />
-            <span>Write</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('learning')}
-            className={`p-1.5 rounded flex flex-col items-center gap-1 ${
-              activeTab === 'learning' ? 'text-blue-400 font-semibold' : 'text-slate-400'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Grammar</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('vocabulary')}
-            className={`p-1.5 rounded flex flex-col items-center gap-1 ${
-              activeTab === 'vocabulary' ? 'text-blue-400 font-semibold' : 'text-slate-400'
-            }`}
-          >
-            <Bookmark className="w-4 h-4" />
-            <span>Vocab</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`p-1.5 rounded flex flex-col items-center gap-1 ${
-              activeTab === 'history' ? 'text-blue-400 font-semibold' : 'text-slate-400'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            <span>History</span>
-          </button>
+        {/* Mobile / Tablet Horizontal Navigation */}
+        <div className="lg:hidden flex items-center gap-1 overflow-x-auto py-2 border-t border-slate-100 no-scrollbar">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 flex items-center gap-1.5 transition-colors ${
+                  isActive
+                    ? 'bg-blue-600 text-white font-bold'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{item.label}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className={`px-1 rounded-full text-[9px] ${isActive ? 'bg-white text-blue-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </header>

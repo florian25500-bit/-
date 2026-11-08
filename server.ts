@@ -30,10 +30,10 @@ let tasksStore = [...SAMPLE_TASKS];
 let vocabularyStore = [...INITIAL_VOCABULARY];
 let submissionsStore: AssessmentResult[] = [];
 
-// Initialize Google GenAI client if key is present
+// Initialize Google GenAI client only if a real API key is present
 const geminiApiKey = process.env.GEMINI_API_KEY;
 let aiClient: GoogleGenAI | null = null;
-if (geminiApiKey) {
+if (geminiApiKey && geminiApiKey !== 'MY_GEMINI_API_KEY' && geminiApiKey.trim().length > 15) {
   aiClient = new GoogleGenAI({
     apiKey: geminiApiKey,
     httpOptions: {
@@ -369,6 +369,11 @@ Vor diesem Hintergrund erscheint eine polarisierende Debatte unzureichend. Anste
     created_at: new Date().toISOString(),
   };
 }
+
+// Pre-populate with initial demonstration assessment
+submissionsStore.push(
+  generateDeterministicAssessment(SAMPLE_TASKS[0], SAMPLE_TASKS[0].preset_draft || '')
+);
 
 // REST API Endpoints
 
