@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BookOpen,
   CheckCircle2,
@@ -10,7 +10,7 @@ import {
   Check,
   ChevronRight,
 } from 'lucide-react';
-import { GrammarLesson } from '../types';
+import { GrammarLesson, CEFRLevel } from '../types';
 
 interface LearningCenterViewProps {
   lessons: GrammarLesson[];
@@ -18,6 +18,21 @@ interface LearningCenterViewProps {
   onSelectLesson?: (id: string) => void;
   onStartWriting?: (level?: string) => void;
 }
+
+const getLevelBadgeStyle = (level: CEFRLevel) => {
+  switch (level) {
+    case 'C1':
+      return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    case 'B2':
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'B1':
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    case 'A2':
+      return 'bg-cyan-50 text-cyan-700 border-cyan-200';
+    default:
+      return 'bg-teal-50 text-teal-700 border-teal-200';
+  }
+};
 
 export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
   lessons,
@@ -27,10 +42,25 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
   const [selectedId, setSelectedId] = useState<string>(
     activeLessonId || (lessons[0]?.id ?? 'lesson-nebensaetze')
   );
+  const [levelFilter, setLevelFilter] = useState<'ALL' | CEFRLevel>('ALL');
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [showResults, setShowResults] = useState<boolean>(false);
 
-  const selectedLesson = lessons.find((l) => l.id === selectedId) || lessons[0];
+  useEffect(() => {
+    if (activeLessonId) {
+      setSelectedId(activeLessonId);
+      setUserAnswers({});
+      setShowResults(false);
+    }
+  }, [activeLessonId]);
+
+  const filteredLessons =
+    levelFilter === 'ALL'
+      ? lessons
+      : lessons.filter((l) => l.cefr_level === levelFilter);
+
+  const selectedLesson =
+    lessons.find((l) => l.id === selectedId) || filteredLessons[0] || lessons[0];
 
   const handleSelectLesson = (id: string) => {
     setSelectedId(id);
@@ -60,31 +90,66 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
       {/* Header Banner */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs">
         <span className="text-xs font-bold uppercase tracking-wider text-blue-700">
-          Deutsches Grammatikzentrum
+          Deutsches Grammatik- & Schreibzentrum
         </span>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 tracking-tight">
-          คลังความรู้ไวยากรณ์ภาษาเยอรมันเชิงวิชาการ (Learning Center)
+          คลังความรู้ไวยากรณ์และเทคนิคการเขียนภาษาเยอรมัน (Learning Center)
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl leading-relaxed">
-          บทเรียนไวยากรณ์ระดับ A1–C1 ที่เน้นจุดที่ผู้เรียนชาวไทยมักทำผิดบ่อย พร้อมตัวอย่างประโยคเปรียบเทียบถูก-ผิด และแบบฝึกหัดประเมินตนเอง
+          บทเรียนไวยากรณ์ โครงสร้างย่อหน้า และชุดสำนวนการเขียนระดับ A1–C1 ที่เน้นจุดที่ผู้เรียนชาวไทยมักทำผิดบ่อย พร้อมตัวอย่างเปรียบเทียบถูก-ผิด และแบบฝึกหัดประเมินตนเอง
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left: Lessons List (4 cols) */}
-        <aside className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-2">
-          <div className="px-2 py-1 text-xs font-bold text-slate-700">
-            เลือกหัวข้อบทเรียน ({lessons.length} บทเรียน):
+        <aside className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-3">
+          <div className="px-1 flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700">
+              เลือกหัวข้อบทเรียน ({filteredLessons.length}/{lessons.length} บทเรียน)
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-1 px-1">
+            {(['ALL', 'A1', 'A2', 'B1', 'B2', 'C1'] as const).map((lvl) => {
+              const count =
+                lvl === 'ALL'
+                  ? lessons.length
+                  : lessons.filter((l) => l.cefr_level === lvl).length;
+              return (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => {
+                    setLevelFilter(lvl);
+                    const nextPool =
+                      lvl === 'ALL'
+                        ? lessons
+                        : lessons.filter((l) => l.cefr_level === lvl);
+                    if (nextPool.length > 0 && !nextPool.some((l) => l.id === selectedId)) {
+                      handleSelectLesson(nextPool[0].id);
+                    }
+                  }}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+                    levelFilter === lvl
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {lvl === 'ALL' ? `ทั้งหมด (${count})` : `${lvl} (${count})`}
+                </button>
+              );
+            })}
           </div>
 
           <div className="space-y-1.5 max-h-[640px] overflow-y-auto pr-1 no-scrollbar">
-            {lessons.map((lesson) => {
+            {filteredLessons.map((lesson) => {
               const isSelected = lesson.id === selectedLesson.id;
               return (
-                <div
+                <button
+                  type="button"
                   key={lesson.id}
                   onClick={() => handleSelectLesson(lesson.id)}
-                  className={`p-3 rounded-xl cursor-pointer transition-all border ${
+                  className={`w-full text-left p-3 rounded-xl cursor-pointer transition-all border ${
                     isSelected
                       ? 'bg-blue-50/80 border-blue-300 text-blue-950 shadow-2xs font-medium'
                       : 'border-transparent hover:bg-slate-50 text-slate-700 hover:border-slate-200/60'
@@ -92,17 +157,9 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                 >
                   <div className="flex items-center justify-between text-[11px] mb-1">
                     <span
-                      className={`px-1.5 py-0.2 rounded-md font-bold text-[10px] border ${
-                        lesson.cefr_level === 'C1'
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                          : lesson.cefr_level === 'B2'
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : lesson.cefr_level === 'B1'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : lesson.cefr_level === 'A2'
-                          ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
-                          : 'bg-teal-50 text-teal-700 border-teal-200'
-                      }`}
+                      className={`px-1.5 py-0.2 rounded-md font-bold text-[10px] border ${getLevelBadgeStyle(
+                        lesson.cefr_level
+                      )}`}
                     >
                       {lesson.cefr_level}
                     </span>
@@ -114,7 +171,7 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                   <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
                     {lesson.german_title}
                   </p>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -127,7 +184,11 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
             <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  <span
+                    className={`px-2.5 py-0.5 rounded-md text-xs font-bold border ${getLevelBadgeStyle(
+                      selectedLesson.cefr_level
+                    )}`}
+                  >
                     Niveau {selectedLesson.cefr_level}
                   </span>
                   <span className="text-xs text-slate-400 font-mono">
@@ -284,16 +345,17 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                           }
 
                           return (
-                            <div
+                            <button
+                              type="button"
                               key={optIdx}
                               onClick={() => handleSelectOption(qIdx, optIdx)}
-                              className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center gap-2.5 ${optStyle}`}
+                              className={`w-full text-left p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center gap-2.5 ${optStyle}`}
                             >
                               <span className="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center font-bold text-[10px] shrink-0">
                                 {String.fromCharCode(65 + optIdx)}
                               </span>
                               <span className="leading-snug">{opt}</span>
-                            </div>
+                            </button>
                           );
                         })}
                       </div>

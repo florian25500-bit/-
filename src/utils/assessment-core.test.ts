@@ -137,10 +137,17 @@ test('validateAssessmentPayload rejects incomplete responses and accepts full pa
   assert.equal(valid.valid, true);
 });
 
-test('normalizeLessonId maps topics and IDs to valid grammar lesson IDs including A1/A2', () => {
+test('normalizeLessonId maps topics and IDs to valid grammar lesson IDs including A1/A2 and writing craft', () => {
   assert.equal(normalizeLessonId('lesson-praesens-satzbau', 'anything'), 'lesson-praesens-satzbau');
+  assert.equal(normalizeLessonId('lesson-negation-zeitangaben-a1', 'anything'), 'lesson-negation-zeitangaben-a1');
   assert.equal(normalizeLessonId('lesson-perfekt-modalverben', 'anything'), 'lesson-perfekt-modalverben');
   assert.equal(normalizeLessonId(undefined, 'Präsens V2 W-Fragen A1'), 'lesson-praesens-satzbau');
+  assert.equal(normalizeLessonId(undefined, 'Negation nicht/kein Zeitangaben'), 'lesson-negation-zeitangaben-a1');
+  assert.equal(normalizeLessonId(undefined, 'Brief Anrede Grußformel Register'), 'lesson-brief-anrede-schluss');
+  assert.equal(normalizeLessonId(undefined, 'Kommasetzung und das/dass'), 'lesson-kommasetzung-rechtschreibung');
+  assert.equal(normalizeLessonId(undefined, 'Relativsätze und um zu'), 'lesson-relativsaetze');
+  assert.equal(normalizeLessonId(undefined, 'Redemittel Stellungnahme Beschwerde'), 'lesson-stellungnahme-redemittel');
+  assert.equal(normalizeLessonId(undefined, 'Partizipialattribute und Konjunktiv I'), 'lesson-partizipialattribute-c1');
   assert.equal(normalizeLessonId(undefined, 'Perfekt und Modalverben A2'), 'lesson-perfekt-modalverben');
   assert.equal(normalizeLessonId('lesson-kasus', 'anything'), 'lesson-kasus');
   assert.equal(normalizeLessonId(undefined, 'Dativ und Genitiv Kasus'), 'lesson-kasus');

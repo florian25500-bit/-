@@ -16,15 +16,21 @@ import {
 
 export const VALID_LESSON_IDS = [
   'lesson-praesens-satzbau',
+  'lesson-negation-zeitangaben-a1',
   'lesson-perfekt-modalverben',
+  'lesson-brief-anrede-schluss',
   'lesson-nebensaetze',
   'lesson-kasus',
   'lesson-wechselpraepositionen',
+  'lesson-adjektivendungen',
+  'lesson-kommasetzung-rechtschreibung',
+  'lesson-relativsaetze',
   'lesson-konnektoren-b2',
+  'lesson-stellungnahme-redemittel',
   'lesson-passiv',
   'lesson-konjunktiv-2',
-  'lesson-adjektivendungen',
   'lesson-nominalisierung',
+  'lesson-partizipialattribute-c1',
 ] as const;
 
 export const CEFR_SUBLEVEL_ENUM = ['A1', 'A2', 'A2+', 'B1', 'B1+', 'B2', 'B2+', 'C1', 'C1+'];
@@ -35,6 +41,27 @@ export function normalizeLessonId(lessonId?: string, topic?: string): string {
     return candidate;
   }
   const combined = `${candidate} ${(topic || '').toLowerCase()}`;
+  if (combined.includes('konjunktiv ii') || combined.includes('konjunktiv 2') || (combined.includes('konjunktiv') && !/\bkonjunktiv\s*i\b/.test(combined))) {
+    return 'lesson-konjunktiv-2';
+  }
+  if (combined.includes('partizipial') || /\bkonjunktiv\s*i\b/.test(combined) || combined.includes('indirekte rede') || combined.includes('akademisch') || combined.includes('wissenschaft')) {
+    return 'lesson-partizipialattribute-c1';
+  }
+  if (combined.includes('negation') || combined.includes('nicht/kein') || combined.includes('zeitangabe') || combined.includes('possessiv')) {
+    return 'lesson-negation-zeitangaben-a1';
+  }
+  if (combined.includes('anrede') || combined.includes('gruß') || combined.includes('brief') || combined.includes('e-mail') || combined.includes('register') || combined.includes('sie/du') || combined.includes('höflich')) {
+    return 'lesson-brief-anrede-schluss';
+  }
+  if (combined.includes('komma') || combined.includes('zeichensetzung') || combined.includes('rechtschreibung') || combined.includes('großschreibung') || combined.includes('das/dass') || combined.includes('mechanics')) {
+    return 'lesson-kommasetzung-rechtschreibung';
+  }
+  if (combined.includes('relativ') || combined.includes('infinitiv') || combined.includes('um zu') || combined.includes('um...zu')) {
+    return 'lesson-relativsaetze';
+  }
+  if (combined.includes('stellungnahme') || combined.includes('redemittel') || combined.includes('beschwerde') || combined.includes('argument') || combined.includes('aufbau') || combined.includes('gliederung')) {
+    return 'lesson-stellungnahme-redemittel';
+  }
   if (combined.includes('präsens') || combined.includes('praesens') || combined.includes('v2') || combined.includes('w-frage') || combined.includes('trennbar') || combined.includes('grundlagen') || combined.includes('a1')) {
     return 'lesson-praesens-satzbau';
   }
@@ -55,9 +82,6 @@ export function normalizeLessonId(lessonId?: string, topic?: string): string {
   }
   if (combined.includes('passiv')) {
     return 'lesson-passiv';
-  }
-  if (combined.includes('konjunktiv')) {
-    return 'lesson-konjunktiv-2';
   }
   if (combined.includes('adjektiv') || combined.includes('deklination')) {
     return 'lesson-adjektivendungen';

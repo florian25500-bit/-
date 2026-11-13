@@ -527,5 +527,374 @@ export const GRAMMAR_LESSONS: GrammarLesson[] = [
         explanation_th: '"zur Diskussion stehen / bringen" เป็นสำนวน FVG ที่เป็นมาตรฐานทางวิชาการ'
       }
     ]
+  },
+  {
+    id: 'lesson-negation-zeitangaben-a1',
+    title: 'การปฏิเสธ (nicht/kein) และคำบอกเวลาในอีเมล (am, um, im) (A1)',
+    german_title: 'Negation, Präpositionen der Zeit & Possessivartikel',
+    topic: 'Alltagsschreiben',
+    cefr_level: 'A1',
+    explanation_th:
+      'ในการเขียนอีเมลหรือจดหมายสั้นระดับ A1 (เช่น นัดพบ ยกเลิกนัด หรือเชิญเพื่อน) ผู้เรียนต้องใช้คำบอกเวลาให้ถูกคู่ (am + วัน, um + เวลา, im + เดือน) และเลือกใช้คำปฏิเสธ nicht กับ kein ให้ตรงชนิดคำ รวมถึงคำแสดงความเป็นเจ้าของ (mein/meine, dein/deine) ตามเพศของคำนาม',
+    rules: [
+      'เวลา: am + วัน/ช่วงวัน (am Montag, am Wochenende), um + นาฬิกา (um 18 Uhr), im + เดือน/ฤดู (im Juli, im Sommer)',
+      'kein / keine ใช้ปฏิเสธคำนามที่มี Artikel ไม่ชี้เฉพาะ (ein/eine) หรือไม่มี Artikel เช่น „Ich habe keine Zeit.“',
+      'nicht ใช้ปฏิเสธกริยา คุณศัพท์ หรือคำนามที่มี der/die/das หรือ mein/dein เช่น „Ich kann heute nicht kommen.“',
+      'คำแสดงความเป็นเจ้าของ: mein/dein ใช้กับเพศชายและกลาง (mein Freund), meine/deine ใช้กับเพศหญิงและพหูพจน์ (meine Party)'
+    ],
+    correct_examples: [
+      {
+        german: 'Am Samstag um 19 Uhr mache ich eine Party, aber mein Bruder kann leider nicht kommen.',
+        thai: 'วันเสาร์เวลา 19 นาฬิกาฉันจะจัดงานปาร์ตี้ แต่น่าเสียดายที่พี่ชายของฉันมาไม่ได้',
+        note: 'am Samstag + um 19 Uhr ถูกต้อง และใช้ nicht ปฏิเสธกริยา kommen'
+      },
+      {
+        german: 'Tut mir leid, ich habe morgen leider keine Zeit.',
+        thai: 'ขอโทษด้วย พรุ่งนี้ฉันไม่มีเวลาเลย',
+        note: 'Zeit เป็นคำนามเพศหญิง (die Zeit) จึงใช้ keine Zeit'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Ich habe nicht Zeit am Sonntag.',
+        thai: 'วันอาทิตย์ฉันไม่มีเวลา',
+        correction: 'Ich habe am Sonntag keine Zeit.',
+        why_wrong_th: 'คำนามที่ไม่มี Artikel เช่น Zeit ต้องปฏิเสธด้วย kein/keine ไม่ใช่ nicht'
+      },
+      {
+        german: 'Wir treffen uns in Samstag an 15 Uhr.',
+        thai: 'พวกเรานัดเจอกันวันเสาร์เวลา 15 นาฬิกา',
+        correction: 'Wir treffen uns am Samstag um 15 Uhr.',
+        why_wrong_th: 'วันในสัปดาห์ใช้ am และเวลาเป็นนาฬิกาใช้ um เสมอ'
+      }
+    ],
+    quiz: [
+      {
+        question: 'เลือกคำบุพบทบอกเวลาที่ถูกต้อง: „Der Deutschkurs beginnt ___ Montag ___ 9 Uhr.“',
+        options: ['am / um', 'in / an', 'um / am', 'im / um'],
+        correctIndex: 0,
+        explanation_th: 'วันในสัปดาห์ใช้ am (am Montag) และเวลาตามนาฬิกาใช้ um (um 9 Uhr)'
+      },
+      {
+        question: 'ประโยคใดปฏิเสธคำนามได้ถูกต้อง?',
+        options: [
+          'Ich habe heute kein Geld mit.',
+          'Ich habe heute nicht Geld mit.',
+          'Ich habe heute keine Geld mit.',
+          'Ich nicht habe Geld mit.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'das Geld เป็นเพศกลาง ไม่มี Artikel เมื่อปฏิเสธจึงใช้ kein Geld'
+      }
+    ]
+  },
+  {
+    id: 'lesson-brief-anrede-schluss',
+    title: 'โครงสร้างจดหมายและอีเมล: Anrede, Register (du/Sie) และคำลงท้าย (A2)',
+    german_title: 'Brief- & E-Mail-Aufbau: Anrede, Grußformeln & Register',
+    topic: 'Brief & E-Mail',
+    cefr_level: 'A2',
+    explanation_th:
+      'คะแนนหมวด Register & Stil และ Aufgabenbewältigung ในข้อสอบเขียนตั้งแต่ A1–B2 ขึ้นอยู่กับการเลือกคำขึ้นต้น (Anrede) การใช้สรรพนามให้คงเส้นคงวา (du/ihr กับคนสนิท หรือ Sie/Ihnen กับบุคคลทางการ/ร้านค้า) และคำลงท้าย (Grußformel) ให้ตรงกับผู้รับในโจทย์',
+    rules: [
+      'แบบเป็นกันเอง (เพื่อน/ครอบครัว - du): ขึ้นต้น „Liebe Anna,“ / „Lieber Lukas,“ -> ใช้สรรพนาม du, dir, dich, dein -> ลงท้าย „Viele Grüße“ / „Liebe Grüße“',
+      'แบบสุภาพถึงบุคคลที่รู้จักชื่อ (คุณครู/หมอ/เพื่อนร่วมงาน - Sie): „Sehr geehrte Frau Klein,“ / „Sehr geehrter Herr Weber,“ -> ใช้ Sie, Ihnen, Ihr -> ลงท้าย „Mit freundlichen Grüßen“',
+      'แบบทางการไม่ระบุชื่อ (โรงแรม/ร้านอาหาร/บริษัท - Sie): „Sehr geehrte Damen und Herren,“ + ประโยคแรกหลังจุลภาคขึ้นต้นด้วยตัวพิมพ์เล็ก (ยกเว้นคำนามและ Sie/Ihnen)',
+      'ประโยคขึ้นต้นและปิดท้ายมาตรฐาน: „Vielen Dank für deine/Ihre E-Mail.“ และ „Ich freue mich auf deine/Ihre Antwort.“'
+    ],
+    correct_examples: [
+      {
+        german: 'Sehr geehrte Damen und Herren, ich möchte für Samstag einen Tisch reservieren.',
+        thai: 'เรียนท่านผู้เกี่ยวข้อง กระผม/ดิฉันขอจองโต๊ะสำหรับวันเสาร์ครับ/ค่ะ',
+        note: 'หลังจุลภาคในคำขึ้นต้น ขึ้นต้นคำแรก (ich) ด้วยตัวพิมพ์เล็กตามมาตรฐานอักขรวิธีเยอรมัน'
+      },
+      {
+        german: 'Liebe Maria, vielen Dank für deine Hilfe! Bis bald, dein Tom',
+        thai: 'ถึงมาเรีย ขอบคุณมากสำหรับความช่วยเหลือนะ! แล้วเจอกันเร็ว ๆ นี้ จากทอม',
+        note: 'ใช้ du/dein สอดคล้องกันทั้งฉบับสำหรับเพื่อนสนิท'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Sehr geehrte Frau Klein, danke für deine Hilfe!',
+        thai: 'เรียนคุณไคลน์ ขอบคุณสำหรับความช่วยเหลือของเธอ (สลับระดับภาษา)',
+        correction: 'Sehr geehrte Frau Klein, vielen Dank für Ihre Hilfe!',
+        why_wrong_th: 'ขึ้นต้นแบบสุภาพ (Sehr geehrte Frau...) ห้ามสลับไปใช้ deine ต้องใช้ Ihre ให้คงที่ทั้งฉบับ'
+      },
+      {
+        german: 'Hallo Chef, ich will morgen frei. Tschüss!',
+        thai: 'หวัดดีหัวหน้า พรุ่งนี้ฉันจะลาหยุด บาย!',
+        correction: 'Sehr geehrter Herr Becker, könnte ich morgen bitte einen Tag Urlaub nehmen? Mit freundlichen Grüßen',
+        why_wrong_th: 'กับหัวหน้างานหรือองค์กรควรใช้คำขึ้นต้นและคำลงท้ายแบบทางการ พร้อมคำขอร้องที่สุภาพ'
+      }
+    ],
+    quiz: [
+      {
+        question: 'หากโจทย์กำหนดให้เขียนอีเมลถึงโรงแรม (Hotel am Bahnhof) ควรขึ้นต้นและลงท้ายอย่างไร?',
+        options: [
+          'Sehr geehrte Damen und Herren, ... / Mit freundlichen Grüßen',
+          'Liebe Hotel, ... / Liebe Grüße',
+          'Hallo Freunde, ... / Viele Grüße',
+          'Sehr geehrter Herr Hotel, ... / Bis bald'
+        ],
+        correctIndex: 0,
+        explanation_th: 'เมื่อเขียนถึงองค์กรหรือโรงแรมโดยไม่ระบุชื่อผู้รับ ให้ใช้ „Sehr geehrte Damen und Herren,“ และลงท้ายด้วย „Mit freundlichen Grüßen“'
+      },
+      {
+        question: 'หลังเครื่องหมายจุลภาคใน „Liebe Anna,“ คำถัดไปควรเขียนอย่างไร?',
+        options: [
+          'ขึ้นต้นด้วยตัวพิมพ์เล็ก (เช่น „ich schreibe dir...“)',
+          'ขึ้นต้นด้วยตัวพิมพ์ใหญ่เสมอแม้เป็นสรรพนาม',
+          'เว้นบรรทัดแล้วไม่ต้องใช้ตัวพิมพ์ใหญ่กับคำนาม',
+          'ใส่เครื่องหมายอัศเจรีย์แทนจุลภาคแล้วตามด้วยตัวเล็ก'
+        ],
+        correctIndex: 0,
+        explanation_th: 'ตามกฎเยอรมันสมัยใหม่ หลังจุลภาคใน Anrede ให้ขึ้นต้นบรรทัดใหม่ด้วยตัวพิมพ์เล็ก (ยกเว้นคำนามหรือคำสุภาพ Sie/Ihnen)'
+      }
+    ]
+  },
+  {
+    id: 'lesson-kommasetzung-rechtschreibung',
+    title: 'เครื่องหมายจุลภาค (Kommasetzung), das vs. dass และตัวพิมพ์ใหญ่ในงานเขียน (B1)',
+    german_title: 'Zeichensetzung, das/dass & Großschreibung',
+    topic: 'Zeichensetzung',
+    cefr_level: 'B1',
+    explanation_th:
+      'หมวด Rechtschreibung & Zeichensetzung มักเสียคะแนนง่ายที่สุดจาก 3 จุด คือ การลืมใส่จุลภาคหน้าอนุประโยค (weil, dass, obwohl), การใช้ das (คำนำหน้านาม/สรรพนาม) สลับกับ dass (คำเชื่อมว่า...), และการลืมขึ้นต้นคำนามหรือคำกริยา/คุณศัพท์ที่ทำหน้าที่เป็นคำนามด้วยตัวพิมพ์ใหญ่',
+    rules: [
+      'ใส่ Komma คั่นหน้าและหลังอนุประโยคเสมอ: weil, dass, obwohl, wenn, damit, während, nachdem รวมถึงหน้า aber, sondern, jedoch',
+      'ไม่ต้องใส่ Komma หน้า und / oder เมื่อเชื่อมคำหรือกลุ่มคำที่มีระดับเท่ากัน (เช่น „Bücher und Hefte“)',
+      'das (s ตัวเดียว) = Artikel/Demonstrativpronomen/Relativpronomen (แทนที่ด้วย dieses/welches ได้) ส่วน dass (ss) = คำเชื่อมประโยคย่อย (Verb อยู่ท้ายสุด)',
+      'คำนามทุกคำ และกริยา/คุณศัพท์หลัง Artikel หรือคำอย่าง etwas/viel/nichts ต้องขึ้นต้นตัวพิมพ์ใหญ่ เช่น „beim Schreiben“, „etwas Wichtiges“'
+    ],
+    correct_examples: [
+      {
+        german: 'Ich glaube, dass das Thema beim Schreiben eine wichtige Rolle spielt.',
+        thai: 'ฉันคิดว่าหัวข้อนี้มีบทบาทสำคัญในการเขียน',
+        note: 'dass เชื่อมอนุประโยค + das Thema เป็น Artikel + beim Schreiben ใช้ตัวพิมพ์ใหญ่'
+      },
+      {
+        german: 'Das Buch, das ich gestern gekauft habe, ist sehr spannend.',
+        thai: 'หนังสือที่ฉันซื้อมาเมื่อวานน่าตื่นเต้นมาก',
+        note: 'das ตัวที่สองเป็น Relativpronomen (แทนด้วย welches ได้) จึงใช้ s ตัวเดียว และมี Komma ปิดท้ายอนุประโยค'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Ich hoffe das du bald kommst weil wir viel besprechen müssen.',
+        thai: 'ฉันหวังว่าเธอจะมาเร็ว ๆ นี้เพราะเราต้องคุยกันหลายเรื่อง',
+        correction: 'Ich hoffe, dass du bald kommst, weil wir viel besprechen müssen.',
+        why_wrong_th: 'ต้องใส่ Komma หน้า dass และ weil และ „ว่า...“ ต้องสะกด dass (ss สองตัว)'
+      },
+      {
+        german: 'Wir haben etwas neues über die arbeit gelernt.',
+        thai: 'พวกเราได้เรียนรู้สิ่งใหม่ ๆ เกี่ยวกับการทำงาน',
+        correction: 'Wir haben etwas Neues über die Arbeit gelernt.',
+        why_wrong_th: 'หลัง etwas คุณศัพท์ทำหน้าที่เป็นคำนาม (Neues) และคำนามแท้ (Arbeit) ต้องขึ้นต้นตัวพิมพ์ใหญ่'
+      }
+    ],
+    quiz: [
+      {
+        question: 'ประโยคใดใช้ das / dass และใส่เครื่องหมายจุลภาคได้ถูกต้อง?',
+        options: [
+          'Es ist schade, dass das Wetter heute so schlecht ist.',
+          'Es ist schade das dass Wetter heute so schlecht ist.',
+          'Es ist schade, das das Wetter heute so schlecht ist.',
+          'Es ist schade dass, das Wetter heute so schlecht ist.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'ใส่ Komma ก่อนคำเชื่อม dass (ซึ่งแปลว่า "ว่า") และใช้ das กับคำนาม das Wetter'
+      },
+      {
+        question: 'ข้อใดสะกดตัวพิมพ์ใหญ่-เล็ก (Groß-/Kleinschreibung) ถูกต้อง?',
+        options: [
+          'Beim Lesen habe ich viel Neues entdeckt.',
+          'beim lesen habe ich viel neues entdeckt.',
+          'Beim lesen habe ich viel Neues entdeckt.',
+          'Beim Lesen habe ich viel neues entdeckt.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'beim (= bei dem) ทำให้ Lesen กลายเป็นคำนาม และหลัง viel คุณศัพท์ Neues เป็นคำนาม จึงใช้ตัวพิมพ์ใหญ่ทั้งคู่'
+      }
+    ]
+  },
+  {
+    id: 'lesson-relativsaetze',
+    title: 'ประโยคขยายความ (Relativsätze) และ Infinitiv mit zu / um... zu (B1)',
+    german_title: 'Relativsätze & Infinitivkonstruktionen für flüssiges Schreiben',
+    topic: 'Satzverknüpfung',
+    cefr_level: 'B1',
+    explanation_th:
+      'หากต้องการเขียนให้พ้นระดับประโยคสั้น ๆ แบบ A2 และได้คะแนนดีในระดับ B1–B2 ต้องรู้จักขยายคำนามด้วย Relativsätze (ที่/ซึ่ง...) และบอกจุดประสงค์หรือขยายความคิดด้วย um ... zu (เพื่อที่จะ...), ohne ... zu (โดยปราศจาก...) และ es ist wichtig, ... zu + Infinitiv',
+    rules: [
+      'Relativpronomen (der, die, das / denen / dessen) เลือกเพศและพจน์ตามคำนามข้างหน้า แต่เลือกการก (Kasus) ตามหน้าที่ในอนุประโยคขยาย (Verb อยู่ท้ายสุด)',
+      'พหูพจน์ Dativ ใช้ „denen“ เสมอ เช่น „Die Freunde, denen ich geholfen habe...“',
+      'um ... zu + Infinitiv ใช้บอกจุดประสงค์เมื่อประธานของสองส่วนเป็นคนเดียวกัน เช่น „Ich lerne Deutsch, um in Berlin zu studieren.“',
+      'เมื่อประธานต่างกัน ใช้ „damit“ แทน „um ... zu“ เช่น „Ich erkläre es langsam, damit alle es verstehen.“'
+    ],
+    correct_examples: [
+      {
+        german: 'Das ist ein Problem, über das wir dringend sprechen müssen.',
+        thai: 'นี่คือปัญหาที่เราจำเป็นต้องพูดคุยกันอย่างเร่งด่วน',
+        note: 'sprechen über + Akk -> über das, กริยาแท้ müssen อยู่ท้ายประโยคขยาย'
+      },
+      {
+        german: 'Viele Menschen treiben regelmäßig Sport, um gesund zu bleiben.',
+        thai: 'ผู้คนจำนวนมากออกกำลังกายสม่ำเสมอเพื่อที่จะมีสุขภาพแข็งแรง',
+        note: 'ใส่ Komma หน้า um และวาง zu หน้ากริยา Infinitiv (bleiben)'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Der Kurs, den ich besuche ihn, ist sehr nützlich.',
+        thai: 'คอร์สที่ฉันเข้าเรียนมันมีประโยชน์มาก',
+        correction: 'Der Kurs, den ich besuche, ist sehr nützlich.',
+        why_wrong_th: 'Relativpronomen (den) แทนกรรมไปแล้ว ห้ามใส่สรรพนามซ้ำ (ihn) ในประโยคขยายอีก'
+      },
+      {
+        german: 'Ich schreibe dir, um du kommst zur Party.',
+        thai: 'ฉันเขียนหาเธอเพื่อเธอจะมาปาร์ตี้',
+        correction: 'Ich schreibe dir, damit du zur Party kommst.',
+        why_wrong_th: 'เมื่อประธานสองฝั่งต่างกัน (ich vs. du) ต้องใช้ damit ไม่ใช่ um ... zu'
+      }
+    ],
+    quiz: [
+      {
+        question: 'เติม Relativpronomen ที่ถูกต้อง: „Die Kollegin, ___ ich gestern eine E-Mail geschickt habe, hat schon geantwortet.“',
+        options: ['der', 'die', 'den', 'deren'],
+        correctIndex: 0,
+        explanation_th: 'schicken + Dativ, die Kollegin (เพศหญิง) ใน Dativ คือ der'
+      },
+      {
+        question: 'ประโยคใดใช้โครงสร้างบอกจุดประสงค์ถูกต้องเมื่อประธานเป็นคนเดียวกัน?',
+        options: [
+          'Ich übe jeden Tag, um bessere Aufsätze zu schreiben.',
+          'Ich übe jeden Tag, um bessere Aufsätze schreiben.',
+          'Ich übe jeden Tag, damit bessere Aufsätze zu schreiben.',
+          'Ich übe jeden Tag, für bessere Aufsätze schreiben.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'โครงสร้างมาตรฐานคือ „um ... zu + Infinitiv“ -> um bessere Aufsätze zu schreiben'
+      }
+    ]
+  },
+  {
+    id: 'lesson-stellungnahme-redemittel',
+    title: 'โครงสร้างเรียงความและชุดสำนวน (Redemittel) สำหรับ Stellungnahme & Beschwerde (B2)',
+    german_title: 'Textaufbau & Redemittel für Argumentation und Reklamation',
+    topic: 'Textaufbau & Stil',
+    cefr_level: 'B2',
+    explanation_th:
+      'งานเขียนระดับ B2 (เช่น Stellungnahme หรือ Beschwerde) ต้องการโครงสร้างย่อหน้าที่ชัดเจน (บทนำ → ข้อดี/เหตุผล → ข้อเสีย/ข้อโต้แย้ง → ข้อเสนอแนะ/สรุป) พร้อมชุดสำนวนมาตรฐาน (Redemittel) เพื่อแสดงความคิดเห็น ชั่งน้ำหนักประเด็น และเขียนข้อร้องเรียนอย่างสุภาพแต่หนักแน่น',
+    rules: [
+      'บทนำ (Einleitung): „In der heutigen Gesellschaft wird häufig darüber diskutiert, ob...“ / „Im Folgenden möchte ich zu diesem Thema Stellung nehmen.“',
+      'เปิดประเด็นและยกตัวอย่าง (Argumentation): „Ein wesentliches Argument für ... ist, dass...“ / „Dies lässt sich am Beispiel von ... verdeutlichen.“',
+      'หักล้าง/ชั่งน้ำหนัก (Abwägen): „Dem steht jedoch entgegen, dass...“ / „Allerdings darf man nicht außer Acht lassen, dass...“',
+      'จดหมายร้องเรียน (Beschwerde): „Leider entsprach ... nicht meinen Erwartungen.“ / „Ich fordere Sie auf, bis zum [Datum] für Abhilfe zu sorgen.“',
+      'สรุป (Fazit): „Zusammenfassend lässt sich festhalten, dass...“ / „Aus den genannten Gründen bin ich überzeugt, dass...“'
+    ],
+    correct_examples: [
+      {
+        german: 'Einerseits bietet das Lernen mit digitalen Medien große Flexibilität, andererseits darf der persönliche Austausch nicht vernachlässigt werden.',
+        thai: 'ในด้านหนึ่งการเรียนรู้ผ่านสื่อดิจิทัลให้ความยืดหยุ่นสูง แต่อีกด้านหนึ่งการมีปฏิสัมพันธ์โดยตรงก็ไม่อาจละเลยได้',
+        note: 'ชั่งน้ำหนักสองด้านอย่างสมดุลตรงตามเกณฑ์ B2 Inhalt & Entwicklung'
+      },
+      {
+        german: 'Da die zugesagten Leistungen nicht erbracht wurden, bitte ich um eine angemessene Teilrückerstattung bis zum 15. Mai.',
+        thai: 'เนื่องจากไม่ได้รับบริการตามที่ตกลงไว้ จึงขอความกรุณาคืนเงินบางส่วนอย่างเหมาะสมภายในวันที่ 15 พฤษภาคม',
+        note: 'ใช้สำนวนทางการและกำหนดเส้นตาย (Fristsetzung) ชัดเจนในงานเขียน Beschwerde'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Ich finde das Thema gut. Viele Leute machen das. Aber es ist auch schlecht.',
+        thai: 'ฉันคิดว่าเรื่องนี้ดี คนทำเยอะ แต่มันก็แย่เหมือนกัน (เรียบง่ายเกินระดับ B2)',
+        correction: 'Meiner Auffassung nach bringt diese Entwicklung zwar erhebliche Vorteile mit sich, birgt jedoch auch nicht zu unterschätzende Risiken.',
+        why_wrong_th: 'ระดับ B2 ต้องหลีกเลี่ยงคำกว้าง ๆ อย่าง gut/schlecht และใช้ Redemittel ที่เจาะจงและเชื่อมโยงเหตุผลชัดเจน'
+      }
+    ],
+    quiz: [
+      {
+        question: 'สำนวนใดเหมาะที่สุดสำหรับขึ้นต้นบทสรุป (Fazit) ในเรียงความระดับ B2?',
+        options: [
+          'Zusammenfassend lässt sich sagen, dass eine ausgewogene Lösung notwendig ist.',
+          'Das ist alles, tschüss und vielen Dank für das Lesen.',
+          'Ich bin fertig mit meiner Meinung jetzt.',
+          'Zum Beispiel möchte ich am Ende noch sagen.'
+        ],
+        correctIndex: 0,
+        explanation_th: '„Zusammenfassend lässt sich sagen / festhalten, dass...“ เป็น Redemittel มาตรฐานสำหรับบทสรุป'
+      },
+      {
+        question: 'ในจดหมายร้องเรียน (Beschwerde) ข้อใดสื่อสารได้ตรงตามมารยาททางการระดับ B2?',
+        options: [
+          'Sollte ich bis zum 20. Juni keine Rückmeldung erhalten, behalte ich mir rechtliche Schritte vor.',
+          'Geben Sie mir sofort mein Geld zurück, das ist eine Frechheit!',
+          'Warum arbeiten Sie so schlecht? Ich bin sehr böse.',
+          'Bitte antworten Sie mir, wenn Sie Zeit haben, oder egal.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'การตั้งเงื่อนไขด้วย Konjunktiv/Inversion („Sollte ich..., behalte ich mir... vor“) มีความสุภาพ หนักแน่น และเป็นมืออาชีพ'
+      }
+    ]
+  },
+  {
+    id: 'lesson-partizipialattribute-c1',
+    title: 'ส่วนขยายหน้าคำนาม (Partizipialattribute), Konjunktiv I และสำนวนวิชาการ C1',
+    german_title: 'Partizipialattribute, indirekte Rede & Wissenschaftsstil',
+    topic: 'Akademischer Stil',
+    cefr_level: 'C1',
+    explanation_th:
+      'งานเขียนระดับ C1 (Erörterung / Bericht) โดดเด่นด้วยความกระชับเชิงสาระ (Informationsdichte) และการอ้างอิงมุมมองอย่างเป็นกลางโดยใช้ Partizipialattribute (เปลี่ยนประโยคขยาย Relativsatz มาไว้หน้าคำนาม), Konjunktiv I (อ้างคำกล่าว/งานวิจัย) และคำแสดงความเห็นเชิงวิชาการแบบระมัดระวัง (Hedging)',
+    rules: [
+      'Partizip I (กำลังกระทำ - aktiv): กริยา + -d + คำลงท้ายคุณศัพท์ เช่น „die weltweit steigende Nachfrage“ (แทน „die Nachfrage, die weltweit steigt“)',
+      'Partizip II (ถูกกระทำ - passiv): เช่น „die von Fachleuten geforderten Reformen“ (แทน „die Reformen, die von Fachleuten gefordert werden“)',
+      'Konjunktiv I สำหรับรายงานคำกล่าว/สถิติ: sein -> sei/seien, haben -> habe/hätten, geben -> gebe เช่น „Laut einer Studie sei die Quote gesunken.“',
+      'Hedging เชิงวิชาการ: „Es liegt nahe, dass...“, „Es lässt sich konstatieren, dass...“, „Dies deutet darauf hin, dass...“'
+    ],
+    correct_examples: [
+      {
+        german: 'Die von zahlreichen Wissenschaftlern prognostizierten Veränderungen erfordern ein Umdenken in der Bildungspolitik.',
+        thai: 'การเปลี่ยนแปลงที่นักวิชาการจำนวนมากคาดการณ์ไว้ จำเป็นต้องอาศัยการปรับกระบวนทัศน์ในนโยบายการศึกษา',
+        note: 'ใช้ Partizipialattribut (die ... prognostizierten Veränderungen) ยุบประโยคขยายได้กระชับระดับ C1'
+      },
+      {
+        german: 'Dem Bericht zufolge habe sich die Situation in ländlichen Regionen kaum verbessert.',
+        thai: 'ตามรายงานระบุว่าสถานการณ์ในพื้นที่ชนบทยังแทบไม่ดีขึ้นเลย',
+        note: 'ใช้ Dativ-Präposition „zufolge“ ร่วมกับ Konjunktiv I (habe ... verbessert) อย่างเป็นกลาง'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Die Studenten, die viel Stress haben, lernen schlechter. Man sagt, dass es wahr ist.',
+        thai: 'นักศึกษาที่มีความเครียดมากเรียนได้แย่ลง เขาว่ากันว่ามันเป็นเรื่องจริง (ภาษาธรรมดาเกินระดับ C1)',
+        correction: 'Stark belastete Studierende weisen häufiger Leistungseinbußen auf, was empirische Erhebungen nahelegen.',
+        why_wrong_th: 'ระดับ C1 หลีกเลี่ยง „Man sagt“ และเปลี่ยน Relativsatz พื้นฐานให้กระชับเป็นกลุ่มคำนาม/Partizipialattribut'
+      }
+    ],
+    quiz: [
+      {
+        question: 'ข้อใดแปลง „Die Maßnahmen, die gestern beschlossen wurden“ เป็น Partizipialattribut ได้ถูกต้อง?',
+        options: [
+          'die gestern beschlossenen Maßnahmen',
+          'die gestern beschließenden Maßnahmen',
+          'die gestern zu beschließen Maßnahmen',
+          'die gestern beschlossen Maßnahmen'
+        ],
+        correctIndex: 0,
+        explanation_th: 'เป็นการถูกกระทำในอดีต (Passiv) จึงใช้ Partizip II (beschlossen) พร้อมคำลงท้าย -en หลัง die พหูพจน์'
+      },
+      {
+        question: 'ข้อใดใช้ Konjunktiv I ในการอ้างอิงแหล่งข้อมูลได้ถูกต้องตามมาตรฐาน C1?',
+        options: [
+          'Die Autorin betont, der Arbeitsmarkt befinde sich in einem tiefgreifenden Wandel.',
+          'Die Autorin betont, der Arbeitsmarkt befindet sich in ein Wandel.',
+          'Die Autorin betont, dass der Arbeitsmarkt ist in einem Wandel.',
+          'Die Autorin betont, der Arbeitsmarkt sei gewesen in einem Wandel.'
+        ],
+        correctIndex: 0,
+        explanation_th: '„befinde sich“ เป็นรูป Konjunktiv I เอกพจน์บุรุษที่ 3 ที่ถูกต้องสำหรับการรายงานข้อคิดเห็นอย่างเป็นกลาง'
+      }
+    ]
   }
 ];

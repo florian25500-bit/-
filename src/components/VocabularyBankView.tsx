@@ -11,6 +11,8 @@ import {
   ChevronRight,
   RotateCw,
   X,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { VocabularyItem, CEFRLevel } from '../types';
 
@@ -27,6 +29,8 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('ALL');
+  const [selectedPos, setSelectedPos] = useState<string>('ALL');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [flashcardMode, setFlashcardMode] = useState<boolean>(false);
   const [cardIndex, setCardIndex] = useState<number>(0);
@@ -43,12 +47,30 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
 
   const filtered = vocabulary.filter((item) => {
     const matchesLevel = selectedLevel === 'ALL' || item.cefr_level === selectedLevel;
+    const matchesPos =
+      selectedPos === 'ALL' ||
+      (selectedPos === 'Modifier'
+        ? item.part_of_speech === 'Adjective' || item.part_of_speech === 'Adverb'
+        : item.part_of_speech === selectedPos);
+    const q = searchTerm.toLowerCase();
     const matchesSearch =
-      item.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.meaning_th.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.example_sentence.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesLevel && matchesSearch;
+      !q ||
+      item.word.toLowerCase().includes(q) ||
+      item.meaning_th.toLowerCase().includes(q) ||
+      item.example_sentence.toLowerCase().includes(q) ||
+      (item.tags || []).some((t) => t.toLowerCase().includes(q));
+    return matchesLevel && matchesPos && matchesSearch;
   });
+
+  const handleCopyPhrase = async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((curr) => (curr === id ? null : curr)), 1800);
+    } catch {
+      // Fallback ignored in restricted environments
+    }
+  };
 
   const handleCreateWord = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,13 +104,13 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-blue-700">
-              Wortschatz-Datenbank
+              Wortschatz & Redemittel fürs Schreiben
             </span>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 tracking-tight">
-              คลังคำศัพท์และสำนวนเยอรมัน (Vocabulary Bank)
+              คลังคำศัพท์และสำนวนสำหรับงานเขียนเยอรมัน (Vocabulary Bank)
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl leading-relaxed">
-              บันทึกคำศัพท์และสำนวนสำคัญที่ได้จากการตรวจงานเขียน เพื่อทบทวนและนำไปใช้ในงานเขียนครั้งต่อไป
+              รวบรวมคำศัพท์ กริยาสำคัญ คำเชื่อมประโยค และ Redemittel ระดับ A1–C1 สำหรับนำไปใช้เขียนอีเมล จดหมาย เรียงความ และข้อร้องเรียนได้ทันที
             </p>
           </div>
 
@@ -202,35 +224,77 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
       )}
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="ค้นหาคำศัพท์ ความหมาย หรือตัวอย่าง..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-          />
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="relative w-full lg:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="ค้นหาคำศัพท์ แท็ก (เช่น Redemittel) หรือตัวอย่าง..."
+              className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {['ALL', 'A1', 'A2', 'B1', 'B2', 'C1'].map((lvl) => {
+              const count =
+                lvl === 'ALL'
+                  ? vocabulary.length
+                  : vocabulary.filter((v) => v.cefr_level === lvl).length;
+              return (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => {
+                    setSelectedLevel(lvl);
+                    setCardIndex(0);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                    selectedLevel === lvl
+                      ? 'bg-blue-600 text-white font-bold shadow-2xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {lvl === 'ALL' ? `ทุกระดับ (${count})` : `${lvl} (${count})`}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
-          {['ALL', 'A1', 'A2', 'B1', 'B2', 'C1'].map((lvl) => (
-            <button
-              key={lvl}
-              onClick={() => {
-                setSelectedLevel(lvl);
-                setCardIndex(0);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                selectedLevel === lvl
-                  ? 'bg-blue-600 text-white font-bold shadow-2xs'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-              }`}
-            >
-              {lvl === 'ALL' ? 'ทุกระดับ' : lvl}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-400 mr-1">ชนิดคำ/บทบาท:</span>
+            {[
+              { id: 'ALL', label: 'ทั้งหมด' },
+              { id: 'Connector', label: 'คำเชื่อมประโยค (Konnektoren)' },
+              { id: 'Verb', label: 'คำกริยา (Verben)' },
+              { id: 'Noun', label: 'คำนาม (Nomen)' },
+              { id: 'Modifier', label: 'คุณศัพท์/สำนวน (Adj./Adv.)' },
+            ].map((pos) => (
+              <button
+                key={pos.id}
+                type="button"
+                onClick={() => {
+                  setSelectedPos(pos.id);
+                  setCardIndex(0);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+                  selectedPos === pos.id
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/70'
+                }`}
+              >
+                {pos.label}
+              </button>
+            ))}
+          </div>
+
+          <span className="text-[11px] text-slate-400 font-medium">
+            แสดง {filtered.length} จาก {vocabulary.length} รายการ
+          </span>
         </div>
       </div>
 
@@ -254,7 +318,7 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
               key={item.id}
               className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between space-y-3 group"
             >
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span
@@ -275,19 +339,41 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
                     <span className="text-[10px] text-slate-400 font-medium">{item.part_of_speech}</span>
                   </div>
 
-                  <button
-                    onClick={() => onDeleteWord(item.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
-                    title="ลบคำศัพท์นี้"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPhrase(item.id, item.word)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
+                      title="คัดลอกคำศัพท์เพื่อนำไปเขียน"
+                      aria-label={`คัดลอกคำว่า ${item.word}`}
+                    >
+                      {copiedId === item.id ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteWord(item.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                      title="ลบคำศัพท์นี้"
+                      aria-label={`ลบคำว่า ${item.word}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                    {item.word}
-                  </h3>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      {item.word}
+                    </h3>
+                    {item.plural && (
+                      <span className="text-[11px] text-slate-400 shrink-0">Pl. {item.plural}</span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-600 font-medium mt-0.5">
                     {item.meaning_th}
                   </p>
@@ -306,6 +392,19 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
                   </div>
                 )}
               </div>
+
+              {item.tags && item.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {item.tags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-medium"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

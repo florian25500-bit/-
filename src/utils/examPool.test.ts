@@ -47,14 +47,37 @@ test('EXAM_PROMPTS_POOL difficulty, word counts, time limits, and Leitpunkte sca
   assert.ok(b1.every((t) => t.category !== 'Erörterung' && t.category !== 'Bericht'));
 });
 
-test('GRAMMAR_LESSONS and INITIAL_VOCABULARY include A1 and A2 foundational content', () => {
-  const lessonLevels = new Set(GRAMMAR_LESSONS.map((l) => l.cefr_level));
-  assert.ok(lessonLevels.has('A1'));
-  assert.ok(lessonLevels.has('A2'));
-  assert.ok(GRAMMAR_LESSONS.some((l) => l.id === 'lesson-praesens-satzbau' && l.cefr_level === 'A1'));
-  assert.ok(GRAMMAR_LESSONS.some((l) => l.id === 'lesson-perfekt-modalverben' && l.cefr_level === 'A2'));
+import { VALID_LESSON_IDS } from './assessment-core';
 
-  const vocabLevels = new Set(INITIAL_VOCABULARY.map((v) => v.cefr_level));
-  assert.ok(vocabLevels.has('A1'));
-  assert.ok(vocabLevels.has('A2'));
+test('GRAMMAR_LESSONS and INITIAL_VOCABULARY provide complete writing-focused A1–C1 coverage', () => {
+  const levels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1'];
+  assert.equal(GRAMMAR_LESSONS.length, 16);
+
+  const lessonIds = new Set(GRAMMAR_LESSONS.map((l) => l.id));
+  assert.equal(lessonIds.size, GRAMMAR_LESSONS.length, 'Lesson IDs must be unique');
+
+  for (const lvl of levels) {
+    const count = GRAMMAR_LESSONS.filter((l) => l.cefr_level === lvl).length;
+    assert.ok(count >= 2, `Expected at least 2 lessons for ${lvl}, got ${count}`);
+  }
+
+  for (const lesson of GRAMMAR_LESSONS) {
+    assert.ok(
+      (VALID_LESSON_IDS as readonly string[]).includes(lesson.id),
+      `Lesson ${lesson.id} must be registered in VALID_LESSON_IDS`
+    );
+    assert.ok(lesson.rules.length >= 3);
+    assert.ok(lesson.correct_examples.length >= 2);
+    assert.ok(lesson.incorrect_examples.length >= 1);
+    assert.ok(lesson.quiz.length >= 1);
+  }
+
+  assert.ok(INITIAL_VOCABULARY.length >= 50);
+  const vocabIds = new Set(INITIAL_VOCABULARY.map((v) => v.id));
+  assert.equal(vocabIds.size, INITIAL_VOCABULARY.length, 'Vocabulary IDs must be unique');
+
+  for (const lvl of levels) {
+    const count = INITIAL_VOCABULARY.filter((v) => v.cefr_level === lvl).length;
+    assert.ok(count >= 10, `Expected at least 10 vocabulary items for ${lvl}, got ${count}`);
+  }
 });
