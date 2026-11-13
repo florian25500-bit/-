@@ -108,7 +108,8 @@ export function deriveCefrSummary(
 } {
   // If word count is less than 50% of minimum requirement, evidence is insufficient
   if (wordCount < minWords * 0.5) {
-    const isVeryShort = wordCount < minWords * 0.3 || wordCount < 40;
+    const severeCutoff = Math.max(12, Math.round(minWords * 0.3));
+    const isVeryShort = wordCount < severeCutoff;
     const level: ExtendedCEFR = isVeryShort ? 'A1' : 'A2';
     return {
       estimate: level,

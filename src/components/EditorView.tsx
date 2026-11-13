@@ -212,6 +212,10 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
   const getLevelStyle = (level: string) => {
     switch (level) {
+      case 'A1':
+        return 'bg-teal-50 text-teal-800 border-teal-200';
+      case 'A2':
+        return 'bg-cyan-50 text-cyan-800 border-cyan-200';
       case 'B1':
         return 'bg-emerald-50 text-emerald-800 border-emerald-200';
       case 'B2':
@@ -222,6 +226,14 @@ export const EditorView: React.FC<EditorViewProps> = ({
         return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
+
+  const levelOptions = [
+    { id: 'ALL', label: `ทั้งหมด (${tasks.length})` },
+    ...(['A1', 'A2', 'B1', 'B2', 'C1'] as CEFRLevel[]).map((lvl) => ({
+      id: lvl,
+      label: `${lvl} (${tasks.filter((t) => t.cefr_level === lvl).length})`,
+    })),
+  ];
 
   return (
     <div className="space-y-6 py-6 animate-in fade-in duration-200">
@@ -248,7 +260,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
               </span>
 
               <span className="text-[11px] text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200/50">
-                คลังข้อสอบกลาง 504 ข้อ (สุ่ม 168 ข้อ/ระดับ)
+                คลังข้อสอบกลาง {tasks.length} ข้อ (A1–C1)
               </span>
             </div>
 
@@ -256,21 +268,17 @@ export const EditorView: React.FC<EditorViewProps> = ({
               {selectedTask.title}
             </h1>
             <p className="text-xs text-slate-500 leading-relaxed">
-              โจทย์ในการทำข้อสอบเป็นโจทย์กลางมาตรฐานสากล (Goethe/telc) สุ่มจากคลัง 504 ข้อเท่ากันทุกระดับ (B1: 168, B2: 168, C1: 168) ระบบจะประเมินคะแนน CEFR จริง 100 คะแนนจากสิ่งที่คุณเขียนตามเกณฑ์ 7 หมวดอย่างเที่ยงตรง
+              โจทย์ในการทำข้อสอบเป็นโจทย์กลางมาตรฐานสากล (Goethe/telc) ปรับความยาก จำนวนคำ และประเด็นคำถามตรงตามระดับที่สอบจริง (A1, A2, B1, B2, C1) จากคลังทั้งหมด {tasks.length} ข้อ
             </p>
           </div>
 
           {/* Random Task Draw Controller */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
-            <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
-              {[
-                { id: 'ALL', label: 'ทั้งหมด (504)' },
-                { id: 'B1', label: 'B1 (168)' },
-                { id: 'B2', label: 'B2 (168)' },
-                { id: 'C1', label: 'C1 (168)' },
-              ].map((lvl) => (
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 shrink-0">
+            <div className="inline-flex flex-wrap rounded-xl bg-slate-100 p-1 border border-slate-200/80 gap-0.5">
+              {levelOptions.map((lvl) => (
                 <button
                   key={lvl.id}
+                  type="button"
                   onClick={() => {
                     setSelectedLevelFilter(lvl.id);
                     onRollRandomTask(lvl.id === 'ALL' ? undefined : lvl.id);

@@ -2,6 +2,7 @@ import {
   AssessmentError,
   AssessmentResult,
   CategoryScoreItem,
+  CEFRLevel,
   ExtendedCEFR,
   Grade,
   WritingTask,
@@ -502,7 +503,7 @@ export function analyzeGermanLinguisticFeatures(
     const hasFormalGreeting = /sehr geehrte/i.test(text);
     const hasFormalClose = /mit freundlichen grüßen/i.test(text);
     formalityScore = hasFormalGreeting && hasFormalClose ? 1.0 : hasFormalGreeting || hasFormalClose ? 0.75 : 0.5;
-  } else if (task.category === 'E-Mail' && task.cefr_level === 'B1') {
+  } else if (task.category === 'E-Mail' && (task.cefr_level === 'A1' || task.cefr_level === 'A2' || task.cefr_level === 'B1')) {
     const hasInformalGreeting = /liebe|lieber|hallo/i.test(text);
     const hasInformalClose = /liebe grüße|herzliche grüße|viele grüße/i.test(text);
     formalityScore = hasInformalGreeting && hasInformalClose ? 1.0 : 0.75;
@@ -531,33 +532,40 @@ export function analyzeGermanLinguisticFeatures(
 function getSubskillCefr(
   score: number,
   maxScore: number,
-  taskLevel: 'B1' | 'B2' | 'C1',
+  taskLevel: CEFRLevel,
   wordCount: number,
   minWords: number
 ): ExtendedCEFR {
   if (wordCount < minWords * 0.5) {
-    return wordCount < minWords * 0.3 || wordCount < 40 ? 'A1' : 'A2';
+    const severeCutoff = Math.max(12, Math.round(minWords * 0.3));
+    return wordCount < severeCutoff ? 'A1' : 'A2';
   }
   const pct = score / maxScore;
   if (pct >= 0.90) {
     if (taskLevel === 'C1') return 'C1';
     if (taskLevel === 'B2') return 'B2+';
-    return 'B1+';
+    if (taskLevel === 'B1') return 'B1+';
+    if (taskLevel === 'A2') return 'A2+';
+    return 'A1';
   }
   if (pct >= 0.75) {
     if (taskLevel === 'C1') return 'C1';
     if (taskLevel === 'B2') return 'B2';
-    return 'B1';
+    if (taskLevel === 'B1') return 'B1';
+    if (taskLevel === 'A2') return 'A2';
+    return 'A1';
   }
   if (pct >= 0.60) {
     if (taskLevel === 'C1') return 'B2+';
     if (taskLevel === 'B2') return 'B1+';
-    return 'A2+';
+    if (taskLevel === 'B1') return 'A2+';
+    return 'A1';
   }
   if (pct >= 0.45) {
     if (taskLevel === 'C1') return 'B2';
     if (taskLevel === 'B2') return 'B1';
-    return 'A2';
+    if (taskLevel === 'B1') return 'A2';
+    return 'A1';
   }
   if (pct >= 0.30) {
     if (taskLevel === 'C1') return 'B1';
@@ -995,17 +1003,38 @@ export function evaluateTextLinguistically(
   let cefrConfidence: 'high' | 'medium' | 'low' = 'high';
 
   if (calc.total >= 90 && wordCount >= minWords && majorGrammarErrors === 0) {
-    cefrEstimate = task.cefr_level === 'C1' || feats.c1VocabCount >= 3 ? 'C1' : 'B2+';
+    cefrEstimate =
+      task.cefr_level === 'C1' || feats.c1VocabCount >= 3
+        ? 'C1'
+        : task.cefr_level === 'A1'
+        ? 'A1'
+        : task.cefr_level === 'A2'
+        ? 'A2+'
+        : 'B2+';
   } else if (calc.total >= 80 && wordCount >= minWords * 0.9) {
-    cefrEstimate = task.cefr_level === 'C1' ? 'B2+' : 'B2';
+    cefrEstimate =
+      task.cefr_level === 'C1'
+        ? 'B2+'
+        : task.cefr_level === 'A1'
+        ? 'A1'
+        : task.cefr_level === 'A2'
+        ? 'A2'
+        : 'B2';
   } else if (calc.total >= 70 && wordCount >= minWords * 0.8) {
-    cefrEstimate = task.cefr_level === 'B1' ? 'B1' : 'B1+';
+    cefrEstimate =
+      task.cefr_level === 'A1'
+        ? 'A1'
+        : task.cefr_level === 'A2'
+        ? 'A2'
+        : task.cefr_level === 'B1'
+        ? 'B1'
+        : 'B1+';
   } else if (calc.total >= 60 && wordCount >= minWords * 0.65) {
-    cefrEstimate = 'B1';
+    cefrEstimate = task.cefr_level === 'A1' ? 'A1' : task.cefr_level === 'A2' ? 'A2' : 'B1';
   } else if (calc.total >= 50) {
-    cefrEstimate = 'A2+';
+    cefrEstimate = task.cefr_level === 'A1' ? 'A1' : 'A2+';
   } else if (calc.total >= 35) {
-    cefrEstimate = 'A2';
+    cefrEstimate = task.cefr_level === 'A1' ? 'A1' : 'A2';
   } else {
     cefrEstimate = 'A1';
   }
@@ -1040,7 +1069,7 @@ export function evaluateTextLinguistically(
   if (wordCount < minWords) weaknesses.push(`จำนวนคำที่เขียนได้ (${wordCount} คำ) ต่ำกว่าเกณฑ์ขั้นต่ำ ${minWords} คำ`);
   if (majorGrammarErrors > 0) weaknesses.push(`ตำแหน่งคำกริยาในอนุประโยค (Nebensätze) หรือการสลับประธานกริยาคลาดเคลื่อน ${majorGrammarErrors} จุด`);
   if (mechanicsErrors > 0) weaknesses.push(`มีคำนามภาษาเยอรมันที่ลืมขึ้นต้นด้วยตัวพิมพ์ใหญ่ ${mechanicsErrors} จุด`);
-  if (feats.b2VocabCount === 0 && task.cefr_level !== 'B1') weaknesses.push('ยังไม่พบคำศัพท์และสำนวนระดับ B2/C1 เพื่อยกระดับความสละสลวย');
+  if (feats.b2VocabCount === 0 && (task.cefr_level === 'B2' || task.cefr_level === 'C1')) weaknesses.push('ยังไม่พบคำศัพท์และสำนวนระดับ B2/C1 เพื่อยกระดับความสละสลวย');
   if (calc.total < 60) weaknesses.push('คะแนนรวมยังไม่ถึงเกณฑ์ผ่านขั้นต่ำ 60% (Bestehensgrenze) ของสถาบันเกอเธ่และ telc');
   if (weaknesses.length === 0) weaknesses.push('รักษาความแม่นยำทางไวยากรณ์และฝึกใช้ประโยคซับซ้อน (Nominalstil & Passiv) เพิ่มขึ้น');
 

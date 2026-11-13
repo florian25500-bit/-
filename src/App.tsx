@@ -23,10 +23,12 @@ import {
   logOut,
   saveUserSubmission,
   getUserSubmissions,
+  deleteUserSubmission,
   saveUserVocabulary,
   getUserVocabulary,
   deleteUserVocabulary,
 } from './lib/firebase';
+import { removeSubmissionFromState } from './utils/submission-helpers';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -268,6 +270,36 @@ export default function App() {
     }
   };
 
+  const handleDeleteSubmission = async (id: string) => {
+    if (user) {
+      try {
+        await deleteUserSubmission(user.uid, id);
+      } catch (err) {
+        console.error('Failed to delete submission:', err);
+        setSyncNotice('ไม่สามารถลบประวัติงานเขียนจากคลาวด์ได้ กรุณาลองใหม่อีกครั้ง');
+        setTimeout(() => setSyncNotice(null), 5000);
+        return;
+      }
+    }
+
+    const { nextSubmissions, nextCurrentAssessment, removed } = removeSubmissionFromState(
+      submissions,
+      currentAssessment?.id ?? null,
+      id
+    );
+
+    if (!removed) return;
+
+    setSubmissions(nextSubmissions);
+    setCurrentAssessment(nextCurrentAssessment);
+    if (activeTab === 'assessment' && !nextCurrentAssessment) {
+      setActiveTab('history');
+    }
+
+    setSyncNotice('ลบประวัติงานเขียนเรียบร้อยแล้ว');
+    setTimeout(() => setSyncNotice(null), 3500);
+  };
+
   const handleSignOut = async () => {
     try {
       await logOut();
@@ -325,6 +357,7 @@ export default function App() {
             onStartWriting={handleStartWriting}
             onViewAssessment={handleViewAssessment}
             onOpenLesson={handleOpenLesson}
+            onDeleteSubmission={handleDeleteSubmission}
           />
         )}
 
@@ -390,6 +423,7 @@ export default function App() {
             submissions={submissions}
             onViewAssessment={handleViewAssessment}
             onStartNewWriting={() => handleStartWriting()}
+            onDeleteSubmission={handleDeleteSubmission}
           />
         )}
 

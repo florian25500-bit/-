@@ -214,8 +214,8 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 self-start sm:self-auto">
-          {['ALL', 'B1', 'B2', 'C1'].map((lvl) => (
+        <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
+          {['ALL', 'A1', 'A2', 'B1', 'B2', 'C1'].map((lvl) => (
             <button
               key={lvl}
               onClick={() => {
@@ -263,7 +263,11 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
                           ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                           : item.cefr_level === 'B2'
                           ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : item.cefr_level === 'B1'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : item.cefr_level === 'A2'
+                          ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                          : 'bg-teal-50 text-teal-700 border-teal-200'
                       }`}
                     >
                       {item.cefr_level}
@@ -375,6 +379,8 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
                     onChange={(e: any) => setNewLevel(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50"
                   >
+                    <option value="A1">A1</option>
+                    <option value="A2">A2</option>
                     <option value="B1">B1</option>
                     <option value="B2">B2</option>
                     <option value="C1">C1</option>

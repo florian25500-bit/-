@@ -71,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium hidden md:block">
-                ระบบประเมินงานเขียนภาษาเยอรมัน B1–C1 (CEFR)
+                ระบบประเมินงานเขียนภาษาเยอรมัน A1–C1 (CEFR)
               </p>
             </div>
           </div>

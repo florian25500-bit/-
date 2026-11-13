@@ -15,6 +15,8 @@ import {
 } from './scoring';
 
 export const VALID_LESSON_IDS = [
+  'lesson-praesens-satzbau',
+  'lesson-perfekt-modalverben',
   'lesson-nebensaetze',
   'lesson-kasus',
   'lesson-wechselpraepositionen',
@@ -33,6 +35,12 @@ export function normalizeLessonId(lessonId?: string, topic?: string): string {
     return candidate;
   }
   const combined = `${candidate} ${(topic || '').toLowerCase()}`;
+  if (combined.includes('präsens') || combined.includes('praesens') || combined.includes('v2') || combined.includes('w-frage') || combined.includes('trennbar') || combined.includes('grundlagen') || combined.includes('a1')) {
+    return 'lesson-praesens-satzbau';
+  }
+  if (combined.includes('perfekt') || combined.includes('partizip') || combined.includes('modalverb') || combined.includes('präteritum') || combined.includes('a2')) {
+    return 'lesson-perfekt-modalverben';
+  }
   if (combined.includes('nebensatz') || combined.includes('word_order') || combined.includes('word order') || combined.includes('verbletzt') || combined.includes('weil') || combined.includes('obwohl') || combined.includes('satzbau')) {
     return 'lesson-nebensaetze';
   }
@@ -514,7 +522,8 @@ export function calculateMedianCefr(
   minWords?: number
 ): ExtendedCEFR {
   if (wordCount && minWords && wordCount < minWords * 0.5) {
-    return wordCount < minWords * 0.3 || wordCount < 40 ? 'A1' : 'A2';
+    const severeCutoff = Math.max(12, Math.round(minWords * 0.3));
+    return wordCount < severeCutoff ? 'A1' : 'A2';
   }
 
   const levels = Object.values(profile) as ExtendedCEFR[];
@@ -572,7 +581,8 @@ export function calibrateEvidenceScores(
   // Word count constraint check (Unterlänge standard): adjust numeric caps transparently
   // without overwriting the AI's individualized essay-specific feedback.
   if (wordCount < task.min_words * 0.5) {
-    const isSevere = wordCount < task.min_words * 0.28 || wordCount < 40;
+    const severeCutoff = Math.max(10, Math.round(task.min_words * 0.28));
+    const isSevere = wordCount < severeCutoff;
     const capTask = isSevere ? 3 : 6;
     const capContent = isSevere ? 1 : 3;
     const capVocab = isSevere ? 4 : 6;

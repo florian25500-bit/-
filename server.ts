@@ -252,10 +252,16 @@ Return valid JSON matching the schema.`;
       title: parsed.title || `${category}: ${topic}`,
       instructions: parsed.instructions,
       requirements: Array.isArray(parsed.requirements) ? parsed.requirements : [],
-      min_words: parsed.min_words || (level === 'B1' ? 90 : level === 'B2' ? 190 : 270),
-      max_words: parsed.max_words || (level === 'B1' ? 120 : level === 'B2' ? 230 : 340),
-      time_limit_minutes: parsed.time_limit_minutes || (level === 'B1' ? 20 : level === 'B2' ? 35 : 45),
-      task_version: '2.0',
+      min_words:
+        parsed.min_words ||
+        (level === 'A1' ? 30 : level === 'A2' ? 50 : level === 'B1' ? 80 : level === 'B2' ? 160 : 240),
+      max_words:
+        parsed.max_words ||
+        (level === 'A1' ? 50 : level === 'A2' ? 80 : level === 'B1' ? 115 : level === 'B2' ? 220 : 330),
+      time_limit_minutes:
+        parsed.time_limit_minutes ||
+        (level === 'A1' ? 15 : level === 'A2' ? 20 : level === 'B1' ? 25 : level === 'B2' ? 35 : 45),
+      task_version: '4.0',
       sample_outline: parsed.sample_outline,
     };
 
@@ -307,23 +313,48 @@ app.post('/api/assess', async (req: Request, res: Response) => {
       (l) => `- ${l.id}: ${l.german_title} (${l.topic}, ${l.cefr_level})`
     ).join('\n');
 
+    const levelExpectationsMap: Record<string, string> = {
+      A1: `TARGET EXAM LEVEL A1 (Start Deutsch 1 / Goethe-Zertifikat A1):
+- Grade numeric rubric scores strictly AGAINST A1 EXPECTATIONS (NOT B2/C1!).
+- An A1 learner who fulfills all 3 Leitpunkte clearly in simple Hauptsätze (S-V-O), uses basic everyday vocabulary, appropriate du/Sie greeting/closing, and meets 30-50 words deserves 85-100/100 for THIS A1 exam.
+- Do NOT deduct points for absence of Nebensätze, Passiv, Konjunktiv II, or advanced B2/C1 connectors. Only penalize missing Leitpunkte, incomprehensible grammar/conjugation, wrong V2 word order, missing noun capitalization, or register mismatch.
+- In cefr_profile & cefr_estimate, honestly report the demonstrated CEFR sub-level (typically A1 or A2 if above-level structures appear).`,
+      A2: `TARGET EXAM LEVEL A2 (Goethe-Zertifikat A2 / telc Deutsch A2):
+- Grade numeric rubric scores strictly AGAINST A2 EXPECTATIONS.
+- Expect simple everyday narration/requests, basic Perfekt (haben/sein + Partizip II) or Präteritum (war/hatte), Modalverben, simple connectors (und, aber, denn, oder, weil, dass), and appropriate du/Sie register within 50-80 words.
+- Do NOT penalize for lacking C1 Nominalstil or B2 zweigliedrige Konnektoren. Focus on Leitpunkte coverage, basic verb placement, Kasus basics, and clear everyday communication.`,
+      B1: `TARGET EXAM LEVEL B1 (Goethe-Zertifikat B1 / telc Deutsch B1):
+- Grade numeric rubric scores AGAINST B1 EXPECTATIONS (80-115 words).
+- Expect coherent connected text, accurate Nebensätze (weil, obwohl, wenn, dass with Verbletztstellung), reasoned opinions/experiences, and everyday-to-intermediate vocabulary.`,
+      B2: `TARGET EXAM LEVEL B2 (Goethe-Zertifikat B2 / telc Deutsch B2):
+- Grade numeric rubric scores AGAINST B2 EXPECTATIONS (160-220 words).
+- Expect differentiated pros/cons argumentation or formal complaint precision, varied B2 connectors (einerseits... andererseits, hingegen, infolgedessen), Passiv/Konjunktiv II range, and consistent formal register.`,
+      C1: `TARGET EXAM LEVEL C1 (Goethe-Zertifikat C1 / TestDaF):
+- Grade numeric rubric scores AGAINST C1 EXPECTATIONS (240-330 words).
+- Expect academic/analytical precision, Nominalstil, Funktionsverbgefüge, nuanced hedging/concession, complex syntax, and critical synthesis across all Leitpunkte.`,
+    };
+
+    const levelCalibrationInstruction = levelExpectationsMap[task.cefr_level] || levelExpectationsMap.B2;
+
     const assessmentSystemPrompt = `ROLE:
-You are a senior certified German examiner (Goethe-Institut & telc) evaluating an individual learner's German writing submission against CEFR B1, B2, and C1 standards and a strict 100-point rubric.
+You are a senior certified German examiner (Goethe-Institut & telc) evaluating an individual learner's German writing submission against CEFR A1, A2, B1, B2, and C1 standards and a strict 100-point rubric.
+
+${levelCalibrationInstruction}
 
 ABSOLUTE ANTI-TEMPLATE & INDIVIDUALIZATION MANDATE:
 - Every single sentence of feedback MUST be written specifically for THIS submission and THIS learner.
 - NEVER output generic boilerplate, stock praise, or templated phrases (e.g., never say "ควรแบ่งย่อหน้าให้ชัดเจน" or "ควรเพิ่มคำเชื่อม" generically without analyzing and quoting the exact sentences/connectors the learner actually wrote).
 - Cite exact German phrases from the learner's text in „...“ quotes inside your Thai feedback so the learner sees concrete proof of why they earned each score.
-- Evaluate strictly and realistically: reward genuine strengths when earned, penalize missing Leitpunkte, off-topic content (Thema verfehlt), register mismatches, grammatical errors, and severe under-length (Unterlänge) according to real Goethe/telc standards.
+- Evaluate strictly and realistically for target level ${task.cefr_level}: reward genuine strengths when earned, penalize missing Leitpunkte, off-topic content (Thema verfehlt), register mismatches, grammatical errors, and severe under-length (Unterlänge) according to real Goethe/telc standards.
 
-RUBRIC (100 POINTS TOTAL):
+RUBRIC (100 POINTS TOTAL, CALIBRATED FOR LEVEL ${task.cefr_level}):
 1. task_fulfillment (0-20): Coverage of every Leitpunkt, text-type conventions, relevance to prompt, and adherence to target word count (${task.min_words}-${task.max_words} words).
-2. content_development (0-15): Depth of argumentation, logical progression, concreteness of examples, and paragraph structure.
+2. content_development (0-15): Clarity, detail, and logical progression appropriate for level ${task.cefr_level}.
 3. vocabulary (0-20): Lexical range, precision, collocations, and appropriateness for target level ${task.cefr_level}.
-4. grammar (0-20): Morphological accuracy (Kasus, Genus, Konjugation, Deklination), syntax (V2, Nebensatz Verbletztstellung, Inversion, Passiv, Konjunktiv), and sentence complexity.
-5. cohesion (0-15): Coherence, paragraph flow, and natural connector usage (beyond basic und/aber).
+4. grammar (0-20): Morphological accuracy (Kasus, Genus, Konjugation, Deklination) and syntax expected at level ${task.cefr_level}.
+5. cohesion (0-15): Coherence, text flow, and natural connector usage expected at level ${task.cefr_level}.
 6. register (0-5): Appropriateness of formality (Sie vs. du/ihr), tone, and salutation/closing if email/letter/complaint.
-7. mechanics (0-5): Spelling, German noun capitalization (Großschreibung), umlauts/ß, and punctuation (especially Kommasetzung).
+7. mechanics (0-5): Spelling, German noun capitalization (Großschreibung), umlauts/ß, and punctuation (Kommasetzung).
 
 REQUIREMENT EVALUATIONS (Leitpunkte):
 - Produce one item per requirement in the task's requirements list in the exact order given.
@@ -414,14 +445,15 @@ ${normalizedText}
       task
     );
 
+    const fallbackCefr = task.cefr_level;
     const profile: CEFRProfile = {
-      task_fulfillment: parsed.cefr_profile?.task_fulfillment || 'B1',
-      content_development: parsed.cefr_profile?.content_development || 'B1',
-      vocabulary: parsed.cefr_profile?.vocabulary || 'B1',
-      grammar: parsed.cefr_profile?.grammar || 'B1',
-      cohesion: parsed.cefr_profile?.cohesion || 'B1',
-      register: parsed.cefr_profile?.register || 'B1',
-      mechanics: parsed.cefr_profile?.mechanics || 'B1',
+      task_fulfillment: parsed.cefr_profile?.task_fulfillment || fallbackCefr,
+      content_development: parsed.cefr_profile?.content_development || fallbackCefr,
+      vocabulary: parsed.cefr_profile?.vocabulary || fallbackCefr,
+      grammar: parsed.cefr_profile?.grammar || fallbackCefr,
+      cohesion: parsed.cefr_profile?.cohesion || fallbackCefr,
+      register: parsed.cefr_profile?.register || fallbackCefr,
+      mechanics: parsed.cefr_profile?.mechanics || fallbackCefr,
     };
 
     if (wordCount < task.min_words * 0.5) {

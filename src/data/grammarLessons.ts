@@ -2,6 +2,131 @@ import { GrammarLesson } from '../types';
 
 export const GRAMMAR_LESSONS: GrammarLesson[] = [
   {
+    id: 'lesson-praesens-satzbau',
+    title: 'โครงสร้างประโยคพื้นฐาน V2 การผันกริยาปัจจุบัน และประโยคคำถาม (A1)',
+    german_title: 'Präsens, Verbzweitstellung (V2) & W-Fragen',
+    topic: 'Grundlagen',
+    cefr_level: 'A1',
+    explanation_th:
+      'สำหรับงานเขียนระดับ A1 สิ่งสำคัญที่สุดคือการวางกริยาที่ผันตามประธานไว้ในตำแหน่งที่ 2 เสมอ (Verbzweitstellung) ในประโยคบอกเล่าและประโยคคำถามแบบ W-Frage รวมถึงการผันกริยาปัจจุบัน (Präsens) และแยกคำกริยาแยกส่วนได้ (Trennbare Verben) ให้ถูกต้อง',
+    rules: [
+      'ประโยคบอกเล่า: ตำแหน่งที่ 1 (ประธานหรือเวลา/สถานที่) + ตำแหน่งที่ 2 (กริยาที่ผันแล้ว) + ส่วนขยาย',
+      'ประโยคคำถาม Ja/Nein: นำกริยาขึ้นตำแหน่งที่ 1 เช่น „Kommst du am Samstag?“',
+      'ประโยคคำถาม W-Frage: คำถาม (Wo, Wann, Was, Warum) + กริยาตำแหน่งที่ 2 เช่น „Wann beginnt der Kurs?“',
+      'คำกริยาแยกส่วนได้ (เช่น ankommen, einkaufen, mitbringen): ส่วนกริยาหลักอยู่ตำแหน่งที่ 2 ส่วนคำอุปสรรค (an-, ein-, mit-) ไปอยู่ท้ายประโยค'
+    ],
+    correct_examples: [
+      {
+        german: 'Am Samstag mache ich eine Geburtstagsparty.',
+        thai: 'วันเสาร์ฉันจะจัดงานปาร์ตี้วันเกิด',
+        note: 'เมื่อขึ้นต้นด้วยเวลา (Am Samstag) กริยา mache ยังคงอยู่ตำแหน่งที่ 2 หน้าประธาน ich'
+      },
+      {
+        german: 'Kannst du bitte einen Salat mitbringen?',
+        thai: 'ช่วยนำสลัดมาด้วยได้ไหม?',
+        note: 'เมื่อมี Modalverb (kannst) กริยาหลัก (mitbringen) ไม่ต้องแยกส่วนและอยู่ท้ายประโยค'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Am Samstag ich mache eine Party.',
+        thai: 'วันเสาร์ฉันจัดปาร์ตี้',
+        correction: 'Am Samstag mache ich eine Party.',
+        why_wrong_th: 'ภาษาเยอรมันห้ามวางประธานคั่นระหว่างคำบอกเวลากับกริยา ต้องสลับกริยา mache มาอยู่ตำแหน่งที่ 2'
+      },
+      {
+        german: 'Ich nicht kann kommen.',
+        thai: 'ฉันไม่สามารถมาได้',
+        correction: 'Ich kann nicht kommen.',
+        why_wrong_th: 'กริยาช่วย kann อยู่ตำแหน่งที่ 2 ส่วนกริยารูปเดิม kommen อยู่ท้ายประโยค'
+      }
+    ],
+    quiz: [
+      {
+        question: 'ประโยคใดเรียงคำถูกต้องสำหรับระดับ A1?',
+        options: [
+          'Morgen ich gehe in den Deutschkurs.',
+          'Morgen gehe ich in den Deutschkurs.',
+          'Ich morgen gehe in den Deutschkurs.',
+          'Gehe morgen ich in den Deutschkurs.'
+        ],
+        correctIndex: 1,
+        explanation_th: 'เมื่อวาง Morgen ในตำแหน่งที่ 1 กริยาที่ผัน (gehe) ต้องอยู่ตำแหน่งที่ 2 ทันที'
+      },
+      {
+        question: 'เลือกการผันและตำแหน่งคำที่ถูกต้องสำหรับกริยา "einkaufen":',
+        options: [
+          'Ich kaufe am Freitag im Supermarkt ein.',
+          'Ich einkaufe am Freitag im Supermarkt.',
+          'Ich ein am Freitag im Supermarkt kaufe.',
+          'Am Freitag ich kaufe ein im Supermarkt.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'einkaufen เป็น trennbares Verb จึงแยก kaufe ไว้ตำแหน่งที่ 2 และย้าย ein ไปท้ายประโยค'
+      }
+    ]
+  },
+  {
+    id: 'lesson-perfekt-modalverben',
+    title: 'อดีตกาล Perfekt และการใช้กริยาช่วย Modalverben (A2)',
+    german_title: 'Perfekt (haben/sein) & Modalverben im Alltag',
+    topic: 'Perfekt',
+    cefr_level: 'A2',
+    explanation_th:
+      'ในการสอบระดับ A2 ผู้เรียนมักต้องเล่าเหตุการณ์ที่ผ่านมาในจดหมาย/อีเมล (เช่น วันหยุดสุดสัปดาห์ งานเลี้ยง หรืออาการป่วย) โดยใช้โครงสร้างอดีตกาล Perfekt (haben/sein + Partizip II ท้ายประโยค) ควบคู่กับ Modalverben (können, müssen, möchten, sollen) และคำเชื่อมพื้นฐาน (und, aber, denn, weil, deshalb)',
+    rules: [
+      'Perfekt ใช้ haben กับกริยาทั่วไป และใช้ sein กับกริยาเคลื่อนที่เปลี่ยนตำแหน่ง/เปลี่ยนสภาพ (เช่น gehen, fahren, fliegen, kommen, bleiben, sein)',
+      'Partizip II ต้องวางไว้ท้ายประโยคเสมอ เช่น „Wir haben am Sonntag einen Ausflug gemacht.“',
+      'กริยา sein และ haben ในอดีตนิยมใช้รูป Präteritum คือ war / hatte เพื่อความกระชับเป็นธรรมชาติ',
+      'หลังคำเชื่อม denn (เพราะว่า) กริยาอยู่ตำแหน่งที่ 2 เหมือนเดิม ต่างจาก weil ที่กริยาไปอยู่ท้ายประโยค'
+    ],
+    correct_examples: [
+      {
+        german: 'Am Wochenende bin ich mit Freunden nach München gefahren.',
+        thai: 'สุดสัปดาห์ที่ผ่านมาฉันได้เดินทางไปมิวนิกกับเพื่อน ๆ',
+        note: 'fahren เป็นกริยาเคลื่อนที่ จึงใช้ bin + gefahren (ท้ายประโยค)'
+      },
+      {
+        german: 'Ich konnte leider nicht kommen, weil ich lange arbeiten musste.',
+        thai: 'ฉันไม่สามารถมาได้เพราะฉันต้องทำงานดึก',
+        note: 'กริยาช่วยอดีต (konnte / musste) สอดคล้องกับระดับ A2/B1'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Gestern ich habe einen Film gesehen.',
+        thai: 'เมื่อวานฉันดูหนังมา',
+        correction: 'Gestern habe ich einen Film gesehen.',
+        why_wrong_th: 'กริยาช่วย habe ต้องอยู่ตำแหน่งที่ 2 หลังคำว่า Gestern'
+      },
+      {
+        german: 'Am Samstag habe ich nach Berlin gefahren.',
+        thai: 'วันเสาร์ฉันไปเบอร์ลินมา',
+        correction: 'Am Samstag bin ich nach Berlin gefahren.',
+        why_wrong_th: 'fahren เป็นกริยาแสดงการเคลื่อนย้ายสถานที่ ต้องใช้ sein (bin) ไม่ใช่ haben'
+      }
+    ],
+    quiz: [
+      {
+        question: 'ประโยคใดใช้รูป Perfekt ได้ถูกต้อง?',
+        options: [
+          'Letzte Woche haben wir eine Reise nach Wien gemacht.',
+          'Letzte Woche wir haben gemacht eine Reise nach Wien.',
+          'Letzte Woche sind wir eine Reise nach Wien gemacht.',
+          'Letzte Woche haben wir gemacht eine Reise nach Wien.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'machen ใช้กับ haben (ตำแหน่งที่ 2) และ Partizip II (gemacht) ต้องอยู่ท้ายประโยค'
+      },
+      {
+        question: 'เติมกริยาช่วยในประโยค: „Am Sonntag ___ wir früh aufgestanden.“',
+        options: ['haben', 'sind', 'werden', 'hatten'],
+        correctIndex: 1,
+        explanation_th: 'aufstehen เป็นกริยาเปลี่ยนสภาพ/เคลื่อนไหว จึงใช้ sein -> sind ... aufgestanden'
+      }
+    ]
+  },
+  {
     id: 'lesson-nebensaetze',
     title: 'ตำแหน่งคำในอนุประโยค (Nebensätze: weil, obwohl, dass)',
     german_title: 'Nebensätze und Verbletztstellung',

@@ -25,6 +25,8 @@ export const LandingView: React.FC<LandingViewProps> = ({
   tasks,
   onOpenRubric,
 }) => {
+  const a1Tasks = tasks.filter((t) => t.cefr_level === 'A1');
+  const a2Tasks = tasks.filter((t) => t.cefr_level === 'A2');
   const b1Tasks = tasks.filter((t) => t.cefr_level === 'B1');
   const b2Tasks = tasks.filter((t) => t.cefr_level === 'B2');
   const c1Tasks = tasks.filter((t) => t.cefr_level === 'C1');
@@ -44,12 +46,12 @@ export const LandingView: React.FC<LandingViewProps> = ({
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
             ระบบประเมินงานเขียนภาษาเยอรมัน{' '}
             <span className="text-blue-600">
-              ระดับ B1, B2 และ C1
+              ระดับ A1 – C1
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-sans">
-            ฝึกเขียนข้อสอบภาษาเยอรมันด้วยเกณฑ์วิชาการแท้จริง 100 คะแนนเต็ม ตรวจจับและวิเคราะห์ข้อผิดพลาดทุกจุด พร้อมคำอธิบายหลักไวยากรณ์เป็นภาษาไทย และพัฒนาการเขียนด้วยตัวอย่างระดับ B2 และ C1
+            ฝึกเขียนข้อสอบภาษาเยอรมันด้วยเกณฑ์วิชาการแท้จริง 100 คะแนนเต็ม ปรับความยากของโจทย์ตรงตามระดับที่สอบ (A1, A2, B1, B2 และ C1) พร้อมวิเคราะห์ข้อผิดพลาดและอธิบายหลักไวยากรณ์เป็นภาษาไทย
           </p>
 
           <div className="flex flex-wrap items-center gap-3.5 pt-2">
@@ -175,7 +177,71 @@ export const LandingView: React.FC<LandingViewProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* A1 Task Card */}
+          {a1Tasks[0] && (
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs hover:border-teal-400 transition-all flex flex-col justify-between space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                    Niveau A1
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium">{a1Tasks[0].category}</span>
+                </div>
+                <h3 className="font-bold text-slate-900 text-base mb-1.5">
+                  {a1Tasks[0].title}
+                </h3>
+                <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                  {a1Tasks[0].instructions}
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs text-slate-400 font-medium">
+                  {a1Tasks[0].min_words}–{a1Tasks[0].max_words} คำ • {a1Tasks[0].time_limit_minutes} นาที
+                </span>
+                <button
+                  onClick={() => onStartWriting(a1Tasks[0])}
+                  className="px-3.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  เลือกข้อสอบ
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* A2 Task Card */}
+          {a2Tasks[0] && (
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs hover:border-cyan-400 transition-all flex flex-col justify-between space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">
+                    Niveau A2
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium">{a2Tasks[0].category}</span>
+                </div>
+                <h3 className="font-bold text-slate-900 text-base mb-1.5">
+                  {a2Tasks[0].title}
+                </h3>
+                <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                  {a2Tasks[0].instructions}
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs text-slate-400 font-medium">
+                  {a2Tasks[0].min_words}–{a2Tasks[0].max_words} คำ • {a2Tasks[0].time_limit_minutes} นาที
+                </span>
+                <button
+                  onClick={() => onStartWriting(a2Tasks[0])}
+                  className="px-3.5 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-700 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  เลือกข้อสอบ
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* B1 Task Card */}
           {b1Tasks[0] && (
             <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs hover:border-blue-400 transition-all flex flex-col justify-between space-y-4">

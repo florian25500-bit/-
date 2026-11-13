@@ -294,6 +294,32 @@ export async function getUserSubmissions(userId: string): Promise<AssessmentResu
   return localSubs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
+export async function deleteUserSubmission(userId: string, submissionId: string): Promise<void> {
+  if (auth.currentUser && auth.currentUser.uid === userId) {
+    const docPath = `users/${userId}/submissions/${submissionId}`;
+    try {
+      const docRef = doc(db, 'users', userId, 'submissions', submissionId);
+      await deleteDoc(docRef);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, docPath);
+    }
+  }
+
+  try {
+    const key = `deutschschreiben_subs_${userId}`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const existing: AssessmentResult[] = JSON.parse(raw);
+      localStorage.setItem(
+        key,
+        JSON.stringify(existing.filter((s) => s.id !== submissionId))
+      );
+    }
+  } catch (e) {
+    console.warn('Local submission delete error:', e);
+  }
+}
+
 export interface StoredVocabularyItem {
   id: string;
   userId: string;

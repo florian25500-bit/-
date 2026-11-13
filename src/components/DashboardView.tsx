@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   PenLine,
   Trophy,
@@ -11,6 +11,7 @@ import {
   ChevronRight,
   CheckCircle2,
   FileQuestion,
+  Trash2,
 } from 'lucide-react';
 import { AssessmentResult, WritingTask } from '../types';
 
@@ -19,6 +20,7 @@ interface DashboardViewProps {
   onStartWriting: (task?: WritingTask) => void;
   onViewAssessment: (result: AssessmentResult) => void;
   onOpenLesson: (lessonId: string) => void;
+  onDeleteSubmission: (id: string) => Promise<void> | void;
   tasks: WritingTask[];
 }
 
@@ -27,8 +29,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onStartWriting,
   onViewAssessment,
   onOpenLesson,
+  onDeleteSubmission,
   tasks,
 }) => {
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleConfirmDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await onDeleteSubmission(id);
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
+  };
   const totalSubmissions = submissions.length;
 
   const averageScore =
@@ -87,7 +102,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               แดชบอร์ดประเมินการเขียน (Writing Dashboard)
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
-              ติดตามสถิติและผลการประเมินจากงานเขียนจริงของคุณตามเกณฑ์มาตรฐาน CEFR (B1–C1)
+              ติดตามสถิติและผลการประเมินจากงานเขียนจริงของคุณตามเกณฑ์มาตรฐาน CEFR (A1–C1)
             </p>
           </div>
 
@@ -421,10 +436,53 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <td className="py-3.5 px-4 font-semibold text-blue-600">
                       {sub.cefr_estimate}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <span className="text-blue-600 font-semibold hover:underline inline-flex items-center gap-1">
-                        ดูผลตรวจ <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
+                    <td
+                      className="py-3.5 px-4 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="inline-flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onViewAssessment(sub)}
+                          className="text-blue-600 font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>ดูผลตรวจ</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+
+                        {confirmDeleteId === sub.id ? (
+                          <div className="inline-flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-1.5 py-0.5">
+                            <button
+                              type="button"
+                              disabled={deletingId === sub.id}
+                              onClick={() => handleConfirmDelete(sub.id)}
+                              aria-label={`ยืนยันลบประวัติ ${sub.task_title}`}
+                              className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold text-[11px] cursor-pointer"
+                            >
+                              {deletingId === sub.id ? 'กำลังลบ...' : 'ยืนยันลบ'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deletingId === sub.id}
+                              onClick={() => setConfirmDeleteId(null)}
+                              aria-label={`ยกเลิกการลบ ${sub.task_title}`}
+                              className="px-1.5 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-600 font-semibold text-[11px] border border-slate-200 cursor-pointer"
+                            >
+                              ยกเลิก
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(sub.id)}
+                            aria-label={`ลบประวัติ ${sub.task_title}`}
+                            title="ลบประวัติชิ้นนี้"
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

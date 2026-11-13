@@ -66,7 +66,7 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
           คลังความรู้ไวยากรณ์ภาษาเยอรมันเชิงวิชาการ (Learning Center)
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl leading-relaxed">
-          บทเรียนไวยากรณ์ระดับ B1–C1 ที่เน้นจุดที่ผู้เรียนชาวไทยมักทำผิดบ่อย พร้อมตัวอย่างประโยคเปรียบเทียบถูก-ผิด และแบบฝึกหัดประเมินตนเอง
+          บทเรียนไวยากรณ์ระดับ A1–C1 ที่เน้นจุดที่ผู้เรียนชาวไทยมักทำผิดบ่อย พร้อมตัวอย่างประโยคเปรียบเทียบถูก-ผิด และแบบฝึกหัดประเมินตนเอง
         </p>
       </div>
 
@@ -97,7 +97,11 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                           ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                           : lesson.cefr_level === 'B2'
                           ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : lesson.cefr_level === 'B1'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : lesson.cefr_level === 'A2'
+                          ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                          : 'bg-teal-50 text-teal-700 border-teal-200'
                       }`}
                     >
                       {lesson.cefr_level}

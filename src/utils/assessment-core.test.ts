@@ -137,11 +137,49 @@ test('validateAssessmentPayload rejects incomplete responses and accepts full pa
   assert.equal(valid.valid, true);
 });
 
-test('normalizeLessonId maps topics and IDs to valid grammar lesson IDs', () => {
+test('normalizeLessonId maps topics and IDs to valid grammar lesson IDs including A1/A2', () => {
+  assert.equal(normalizeLessonId('lesson-praesens-satzbau', 'anything'), 'lesson-praesens-satzbau');
+  assert.equal(normalizeLessonId('lesson-perfekt-modalverben', 'anything'), 'lesson-perfekt-modalverben');
+  assert.equal(normalizeLessonId(undefined, 'Präsens V2 W-Fragen A1'), 'lesson-praesens-satzbau');
+  assert.equal(normalizeLessonId(undefined, 'Perfekt und Modalverben A2'), 'lesson-perfekt-modalverben');
   assert.equal(normalizeLessonId('lesson-kasus', 'anything'), 'lesson-kasus');
   assert.equal(normalizeLessonId(undefined, 'Dativ und Genitiv Kasus'), 'lesson-kasus');
   assert.equal(normalizeLessonId(undefined, 'Zweiteilige Konnektoren'), 'lesson-konnektoren-b2');
   assert.equal(normalizeLessonId(undefined, 'Konjunktiv II Höflichkeit'), 'lesson-konjunktiv-2');
   assert.equal(normalizeLessonId(undefined, 'Nominalisierung C1'), 'lesson-nominalisierung');
 });
+
+test('calibrateEvidenceScores does not penalize a valid 35-word A1 submission as Unterlänge', () => {
+  const a1Task: WritingTask = {
+    id: 't-a1-test',
+    task_id: 'EXAM-A1-001',
+    language: 'de',
+    cefr_level: 'A1',
+    category: 'E-Mail',
+    topic: 'Geburtstagsparty',
+    title: 'Geburtstagsparty: Einladung schreiben',
+    instructions: 'Schreiben Sie eine kurze E-Mail (30–50 Wörter).',
+    requirements: ['Warum schreiben Sie?', 'Wann und wo?', 'Was mitbringen?'],
+    min_words: 30,
+    max_words: 50,
+    time_limit_minutes: 15,
+    task_version: '4.0',
+  };
+
+  const rawScores = {
+    task_fulfillment: { score: 19, feedback_th: 'ตอบครบทั้ง 3 ประเด็น' },
+    content_development: { score: 13, feedback_th: 'ข้อมูลชัดเจนเหมาะสมกับระดับ A1' },
+    vocabulary: { score: 18, feedback_th: 'ใช้คำศัพท์พื้นฐานได้ถูกต้อง' },
+    grammar: { score: 18, feedback_th: 'ผันกริยาและตำแหน่ง V2 ถูกต้อง' },
+    cohesion: { score: 13, feedback_th: 'เชื่อมประโยคด้วย und / aber ได้ดี' },
+    register: { score: 5, feedback_th: 'ใช้ภาษาเป็นกันเองเหมาะสม' },
+    mechanics: { score: 5, feedback_th: 'สะกดถูกต้อง' },
+  };
+
+  const result = calibrateEvidenceScores(rawScores, [], 35, a1Task);
+  assert.equal(result.adjustments.length, 0);
+  assert.equal(result.totalScore, 91);
+  assert.equal(result.grade, 'A');
+});
+
 

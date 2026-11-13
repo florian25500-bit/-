@@ -13,6 +13,7 @@ import {
   Calendar,
   X,
   ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { AssessmentResult } from '../types';
 
@@ -20,17 +21,21 @@ interface HistoryViewProps {
   submissions: AssessmentResult[];
   onViewAssessment: (result: AssessmentResult) => void;
   onStartNewWriting: () => void;
+  onDeleteSubmission: (id: string) => Promise<void> | void;
 }
 
 export const HistoryView: React.FC<HistoryViewProps> = ({
   submissions,
   onViewAssessment,
   onStartNewWriting,
+  onDeleteSubmission,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('ALL');
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filtered = submissions.filter((sub) => {
     const matchesLevel = selectedLevel === 'ALL' || sub.task_level === selectedLevel;
@@ -50,6 +55,17 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       }
       return [...prev, id];
     });
+  };
+
+  const handleConfirmDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await onDeleteSubmission(id);
+      setCompareIds((prev) => prev.filter((cid) => cid !== id));
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
   };
 
   const subA = submissions.find((s) => s.id === compareIds[0]);
@@ -106,8 +122,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 self-start sm:self-auto">
-          {['ALL', 'B1', 'B2', 'C1'].map((lvl) => (
+        <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
+          {['ALL', 'A1', 'A2', 'B1', 'B2', 'C1'].map((lvl) => (
             <button
               key={lvl}
               onClick={() => setSelectedLevel(lvl)}
@@ -196,8 +212,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     <button
+                      type="button"
                       onClick={() => toggleCompare(item.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
                         isComparing
@@ -209,12 +226,47 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => onViewAssessment(item)}
                       className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <span>ดูผลตรวจ</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
+
+                    {confirmDeleteId === item.id ? (
+                      <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-xl px-2 py-1">
+                        <button
+                          type="button"
+                          disabled={deletingId === item.id}
+                          onClick={() => handleConfirmDelete(item.id)}
+                          aria-label={`ยืนยันลบประวัติ ${item.task_title}`}
+                          className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold text-xs transition-colors cursor-pointer"
+                        >
+                          {deletingId === item.id ? 'กำลังลบ...' : 'ยืนยันลบ'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingId === item.id}
+                          onClick={() => setConfirmDeleteId(null)}
+                          aria-label={`ยกเลิกการลบ ${item.task_title}`}
+                          className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-600 font-semibold text-xs border border-slate-200 transition-colors cursor-pointer"
+                        >
+                          ยกเลิก
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(item.id)}
+                        aria-label={`ลบประวัติ ${item.task_title}`}
+                        title="ลบประวัติชิ้นนี้"
+                        className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>ลบ</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

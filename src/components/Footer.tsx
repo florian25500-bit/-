@@ -12,7 +12,7 @@ export const Footer: React.FC = () => {
               DeutschSchreiben AI
             </div>
             <p className="text-slate-500 max-w-md leading-relaxed text-xs">
-              ระบบประเมินงานเขียนภาษาเยอรมันเชิงวิชาการตามกรอบอ้างอิงความสามารถทางภาษาของสหภาพยุโรป (CEFR Companion Volume 2020) ระดับ B1, B2 และ C1 พร้อมเกณฑ์การให้คะแนน 100 คะแนนเต็ม และคำอธิบายข้อผิดพลาดอย่างละเอียดเป็นภาษาไทย
+              ระบบประเมินงานเขียนภาษาเยอรมันเชิงวิชาการตามกรอบอ้างอิงความสามารถทางภาษาของสหภาพยุโรป (CEFR Companion Volume 2020) ระดับ A1, A2, B1, B2 และ C1 พร้อมเกณฑ์การให้คะแนน 100 คะแนนเต็ม และคำอธิบายข้อผิดพลาดอย่างละเอียดเป็นภาษาไทย
             </p>
             <div className="flex items-center gap-2 text-slate-500 text-[11px] pt-1">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -31,7 +31,7 @@ export const Footer: React.FC = () => {
               </li>
               <li className="flex items-center gap-1.5 hover:text-slate-700">
                 <BookOpen className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span>Goethe-Zertifikat B1 / B2 Schreiben</span>
+                <span>Goethe-Zertifikat A1–C1 Schreiben</span>
               </li>
               <li className="flex items-center gap-1.5 hover:text-slate-700">
                 <BookOpen className="w-3.5 h-3.5 text-blue-600 shrink-0" />
@@ -56,7 +56,7 @@ export const Footer: React.FC = () => {
 
         <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-slate-400 text-xs">
           <p>© 2026 DeutschSchreiben AI. All rights reserved.</p>
-          <p className="mt-2 sm:mt-0">German Writing Assessment & Learning Platform • B1 / B2 / C1</p>
+          <p className="mt-2 sm:mt-0">German Writing Assessment & Learning Platform • A1 / A2 / B1 / B2 / C1</p>
         </div>
       </div>
     </footer>
