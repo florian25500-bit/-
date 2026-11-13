@@ -13,14 +13,14 @@ import {
   Shield,
   ChevronDown,
 } from 'lucide-react';
-import type { FirebaseUser } from '../lib/firebase';
+import type { FirebaseUser, AppUser } from '../lib/firebase';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onNewWriting: () => void;
   submissionCount: number;
-  user: FirebaseUser | null;
+  user: AppUser | FirebaseUser | null;
   onOpenAuth: () => void;
   onSignOut: () => void;
 }

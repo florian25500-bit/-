@@ -18,6 +18,8 @@ import {
   auth,
   onAuthStateChanged,
   FirebaseUser,
+  AppUser,
+  getLocalUser,
   logOut,
   saveUserSubmission,
   getUserSubmissions,
@@ -37,62 +39,78 @@ export default function App() {
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Authentication states
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  // Authentication states (supports both Firebase Auth and Instant Local Profiles)
+  const [user, setUser] = useState<FirebaseUser | AppUser | null>(() => getLocalUser());
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
-  // Listen to Firebase Auth state
+  // Helper to load user-specific data
+  const loadUserData = async (activeUser: FirebaseUser | AppUser) => {
+    try {
+      const [userSubs, userVocab] = await Promise.allSettled([
+        getUserSubmissions(activeUser.uid),
+        getUserVocabulary(activeUser.uid),
+      ]);
+
+      if (userSubs.status === 'fulfilled') {
+        const fetchedSubs = userSubs.value || [];
+        setSubmissions(fetchedSubs);
+        if (fetchedSubs.length > 0) {
+          setCurrentAssessment(fetchedSubs[0]);
+        } else {
+          setCurrentAssessment(null);
+        }
+      }
+
+      if (userVocab.status === 'fulfilled' && userVocab.value?.length > 0) {
+        const mappedVocab: VocabularyItem[] = userVocab.value.map((v) => ({
+          id: v.id,
+          word: v.word,
+          part_of_speech: (v.part_of_speech as any) || 'Noun',
+          article: (v.article as any) || undefined,
+          meaning_th: v.meaning_th,
+          example_sentence: v.example_sentence || '',
+          example_translation_th: v.example_translation_th || '',
+          cefr_level: (v.cefr_level as any) || 'B2',
+          created_at: v.created_at,
+        }));
+        setVocabulary((prev) => {
+          const ids = new Set(prev.map((i) => i.id));
+          const newItems = mappedVocab.filter((v) => !ids.has(v.id));
+          return [...newItems, ...prev];
+        });
+      }
+    } catch (err) {
+      console.warn('Error loading user data:', err);
+    }
+  };
+
+  // Listen to Firebase Auth state or local user profile
   useEffect(() => {
+    // If local user is already found on mount, load data immediately
+    const local = getLocalUser();
+    if (local) {
+      setUser(local);
+      loadUserData(local);
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
       setAuthLoading(false);
 
       if (currentUser) {
-        // Authenticated user: Load real user data from Firestore
-        try {
-          const [userSubs, userVocab] = await Promise.allSettled([
-            getUserSubmissions(currentUser.uid),
-            getUserVocabulary(currentUser.uid),
-          ]);
-
-          if (userSubs.status === 'fulfilled') {
-            const fetchedSubs = userSubs.value || [];
-            setSubmissions(fetchedSubs);
-            if (fetchedSubs.length > 0) {
-              setCurrentAssessment(fetchedSubs[0]);
-            } else {
-              setCurrentAssessment(null);
-            }
-          }
-
-          if (userVocab.status === 'fulfilled' && userVocab.value?.length > 0) {
-            const mappedVocab: VocabularyItem[] = userVocab.value.map((v) => ({
-              id: v.id,
-              word: v.word,
-              part_of_speech: (v.part_of_speech as any) || 'Noun',
-              article: (v.article as any) || undefined,
-              meaning_th: v.meaning_th,
-              example_sentence: v.example_sentence || '',
-              example_translation_th: v.example_translation_th || '',
-              cefr_level: (v.cefr_level as any) || 'B2',
-              created_at: v.created_at,
-            }));
-            // Merge custom vocab with initial vocabulary bank
-            setVocabulary((prev) => {
-              const ids = new Set(prev.map((i) => i.id));
-              const newItems = mappedVocab.filter((v) => !ids.has(v.id));
-              return [...newItems, ...prev];
-            });
-          }
-        } catch (err) {
-          console.warn('Error loading Firestore user data:', err);
-        }
+        setUser(currentUser);
+        await loadUserData(currentUser);
       } else {
-        // Logged out: strictly reset user submissions to zero (no fake data)
-        setSubmissions([]);
-        setCurrentAssessment(null);
+        const activeLocal = getLocalUser();
+        if (activeLocal) {
+          setUser(activeLocal);
+          await loadUserData(activeLocal);
+        } else {
+          setUser(null);
+          setSubmissions([]);
+          setCurrentAssessment(null);
+        }
       }
     });
 
@@ -158,7 +176,9 @@ export default function App() {
       });
 
       if (!res.ok) {
-        throw new Error('Assessment failed');
+        const errData = await res.json().catch(() => ({}));
+        const msg = errData.error || 'การประเมินผลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+        throw new Error(msg);
       }
 
       const data = await res.json();
@@ -185,8 +205,9 @@ export default function App() {
         setActiveTab('assessment');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Submission error:', error);
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
@@ -376,7 +397,15 @@ export default function App() {
 
         {activeTab === 'auth' && (
           <AuthView
-            onSuccess={() => {
+            onSuccess={async () => {
+              const local = getLocalUser();
+              if (local) {
+                setUser(local);
+                await loadUserData(local);
+              } else if (auth.currentUser) {
+                setUser(auth.currentUser);
+                await loadUserData(auth.currentUser);
+              }
               setActiveTab('dashboard');
             }}
           />
@@ -387,7 +416,15 @@ export default function App() {
       {showAuthModal && (
         <AuthView
           isModal={true}
-          onSuccess={() => {
+          onSuccess={async () => {
+            const local = getLocalUser();
+            if (local) {
+              setUser(local);
+              await loadUserData(local);
+            } else if (auth.currentUser) {
+              setUser(auth.currentUser);
+              await loadUserData(auth.currentUser);
+            }
             setShowAuthModal(false);
           }}
           onCancel={() => {

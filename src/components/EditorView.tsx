@@ -44,8 +44,14 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
-  // Start with clean blank canvas so the learner writes their own text
-  const [text, setText] = useState<string>('');
+  // Start with saved draft if available for this specific task
+  const [text, setText] = useState<string>(() => {
+    try {
+      return localStorage.getItem(`deutschschreiben_draft_${selectedTask.id}`) || '';
+    } catch {
+      return '';
+    }
+  });
   const [checkedRequirements, setCheckedRequirements] = useState<Record<number, boolean>>({});
   const [lastSaved, setLastSaved] = useState<string>('พร้อมสำหรับการเขียน');
   const [undoStack, setUndoStack] = useState<string[]>([]);
@@ -55,26 +61,60 @@ export const EditorView: React.FC<EditorViewProps> = ({
   const [showOutline, setShowOutline] = useState<boolean>(false);
   const [selectedLevelFilter, setSelectedLevelFilter] = useState<string>('ALL');
 
+  // Interactive Exam Timer
+  const [timeRemainingSeconds, setTimeRemainingSeconds] = useState<number>(selectedTask.time_limit_minutes * 60);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Synchronize when task changes - keep clean canvas
+  // Synchronize when task changes - load draft for that task
   useEffect(() => {
     setCheckedRequirements({});
     setValidationError(null);
+    try {
+      const savedDraft = localStorage.getItem(`deutschschreiben_draft_${selectedTask.id}`) || '';
+      setText(savedDraft);
+    } catch {
+      setText('');
+    }
+    setTimeRemainingSeconds(selectedTask.time_limit_minutes * 60);
+    setIsTimerRunning(false);
   }, [selectedTask]);
 
-  // Autosave status indicator
+  // Exam timer countdown effect
+  useEffect(() => {
+    let interval: any = null;
+    if (isTimerRunning && timeRemainingSeconds > 0) {
+      interval = setInterval(() => {
+        setTimeRemainingSeconds((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    } else if (timeRemainingSeconds === 0) {
+      setIsTimerRunning(false);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, timeRemainingSeconds]);
+
+  // Autosave draft to localStorage
   useEffect(() => {
     if (!text.trim()) {
+      try {
+        localStorage.removeItem(`deutschschreiben_draft_${selectedTask.id}`);
+      } catch {}
       setLastSaved('พร้อมสำหรับการเขียน');
       return;
     }
+
     const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(`deutschschreiben_draft_${selectedTask.id}`, text);
+      } catch (err) {
+        console.warn('Draft save error:', err);
+      }
       const now = new Date();
-      setLastSaved(`บันทึกแบบร่าง ${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`);
-    }, 1200);
+      setLastSaved(`บันทึกแบบร่างอัตโนมัติ ${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`);
+    }, 800);
     return () => clearTimeout(timer);
-  }, [text]);
+  }, [text, selectedTask.id]);
 
   const words = countGermanWords(text);
   const chars = countGermanChars(text);
@@ -83,6 +123,12 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
   const isWordCountValid = words >= selectedTask.min_words && words <= selectedTask.max_words;
   const wordCountProgress = Math.min(100, Math.round((words / selectedTask.min_words) * 100));
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Insert German Umlauts / Eszett at cursor
   const insertGermanChar = (char: string) => {
@@ -137,6 +183,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
   const handleClear = () => {
     setUndoStack((prev) => [...prev, text]);
     setText('');
+    try {
+      localStorage.removeItem(`deutschschreiben_draft_${selectedTask.id}`);
+    } catch {}
     setValidationError(null);
   };
 
@@ -154,7 +203,11 @@ export const EditorView: React.FC<EditorViewProps> = ({
     }
 
     setValidationError(null);
-    await onSubmit(selectedTask, text);
+    try {
+      await onSubmit(selectedTask, text);
+    } catch (err: any) {
+      setValidationError(err?.message || 'การประเมินผลไม่สำเร็จ กรุณาตรวจสอบข้อความ');
+    }
   };
 
   const getLevelStyle = (level: string) => {
@@ -275,9 +328,38 @@ export const EditorView: React.FC<EditorViewProps> = ({
                     คำสั่งและข้อกำหนด
                   </h2>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>เวลาสอบ {selectedTask.time_limit_minutes} นาที</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsTimerRunning(!isTimerRunning)}
+                    className={`inline-flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      timeRemainingSeconds === 0
+                        ? 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse'
+                        : isTimerRunning
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                    title={isTimerRunning ? 'คลิกเพื่อหยุดเวลาชั่วคราว' : 'คลิกเพื่อเริ่มจับเวลาสอบ'}
+                  >
+                    <Clock className={`w-3.5 h-3.5 ${isTimerRunning ? 'text-emerald-600 animate-spin' : 'text-slate-400'}`} />
+                    <span>{formatTimer(timeRemainingSeconds)}</span>
+                    <span className="text-[10px] font-sans font-normal text-slate-400">
+                      {isTimerRunning ? '(จับเวลา)' : '(เริ่ม)'}
+                    </span>
+                  </button>
+                  {timeRemainingSeconds < selectedTask.time_limit_minutes * 60 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsTimerRunning(false);
+                        setTimeRemainingSeconds(selectedTask.time_limit_minutes * 60);
+                      }}
+                      className="text-[10px] text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                      title="รีเซ็ตเวลา"
+                    >
+                      รีเซ็ต
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -440,9 +522,23 @@ export const EditorView: React.FC<EditorViewProps> = ({
               />
 
               {validationError && (
-                <div className="mt-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{validationError}</span>
+                <div
+                  role="alert"
+                  className="mt-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                >
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                    <span className="leading-relaxed">{validationError}</span>
+                  </div>
+                  {text.trim().length > 0 && !isSubmitting && (
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      className="self-end sm:self-center shrink-0 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors cursor-pointer"
+                    >
+                      ลองส่งตรวจอีกครั้ง
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -497,7 +593,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
             {/* Submission Section */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100">
               <p className="text-xs text-slate-500 text-center sm:text-left">
-                ระบบจะวิเคราะห์ประมวลผลข้อเขียนของคุณตามเกณฑ์ CEFR 7 หมวดอย่างเป็นกลางและเที่ยงตรง
+                {isSubmitting
+                  ? 'AI ผู้เชี่ยวชาญกำลังอ่าน วิเคราะห์ข้อผิดพลาด และประเมินงานเขียนรายชิ้นตามเกณฑ์ CEFR...'
+                  : 'ระบบ AI หลังบ้านจะตรวจประเมินงานเขียนชิ้นนี้แบบเฉพาะบุคคลตามเกณฑ์มาตรฐาน CEFR 7 หมวด'}
               </p>
 
               <button
@@ -509,7 +607,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>กำลังประมวลผลการตรวจตามเกณฑ์ CEFR...</span>
+                    <span>กำลังประมวลผลตรวจรายชิ้นงานด้วย AI...</span>
                   </>
                 ) : (
                   <>

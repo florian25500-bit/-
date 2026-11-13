@@ -108,10 +108,12 @@ export function deriveCefrSummary(
 } {
   // If word count is less than 50% of minimum requirement, evidence is insufficient
   if (wordCount < minWords * 0.5) {
+    const isVeryShort = wordCount < minWords * 0.3 || wordCount < 40;
+    const level: ExtendedCEFR = isVeryShort ? 'A1' : 'A2';
     return {
-      estimate: 'B1',
+      estimate: level,
       confidence: 'low',
-      summaryTh: 'หลักฐานการเขียนไม่เพียงพอต่อการประเมินที่แม่นยำ เนื่องจากจำนวนคำต่ำกว่าเกณฑ์ขั้นต่ำมาก (ต่ำกว่า 50%)',
+      summaryTh: `หลักฐานการเขียนไม่เพียงพอต่อการประเมินระดับ ${targetLevel} เนื่องจากจำนวนคำ (${wordCount} คำ) ต่ำกว่า 50% ของเกณฑ์ขั้นต่ำ (${minWords} คำ) ผลประเมินเชิงประจักษ์อยู่ในระดับ ${level}`,
     };
   }
 
@@ -119,25 +121,33 @@ export function deriveCefrSummary(
   const countC1 = levels.filter((l) => l.startsWith('C1')).length;
   const countB2 = levels.filter((l) => l.startsWith('B2')).length;
   const countB1 = levels.filter((l) => l.startsWith('B1')).length;
+  const countA2 = levels.filter((l) => l.startsWith('A2')).length;
+  const countA1 = levels.filter((l) => l.startsWith('A1')).length;
 
   let estimate: ExtendedCEFR = 'B1';
   let confidence: 'high' | 'medium' | 'low' = 'medium';
 
-  if (countC1 >= 5) {
+  if (countA1 + countA2 >= 4) {
+    estimate = countA1 >= 4 ? 'A1' : 'A2';
+    confidence = 'high';
+  } else if (countC1 >= 5) {
     estimate = 'C1';
     confidence = 'high';
   } else if (countC1 >= 3 && countB2 >= 3) {
     estimate = 'B2+';
     confidence = 'high';
   } else if (countB2 >= 4) {
-    estimate = countB2 >= 6 ? 'B2' : 'B2';
+    estimate = 'B2';
     confidence = 'high';
   } else if (countB2 >= 2 && countB1 <= 3) {
     estimate = 'B1+';
     confidence = 'medium';
-  } else {
+  } else if (countB1 >= 4) {
     estimate = 'B1';
-    confidence = countB1 >= 5 ? 'high' : 'medium';
+    confidence = 'high';
+  } else {
+    estimate = 'A2+';
+    confidence = 'medium';
   }
 
   if (wordCount < minWords) {

@@ -528,6 +528,45 @@ export function analyzeGermanLinguisticFeatures(
   };
 }
 
+function getSubskillCefr(
+  score: number,
+  maxScore: number,
+  taskLevel: 'B1' | 'B2' | 'C1',
+  wordCount: number,
+  minWords: number
+): ExtendedCEFR {
+  if (wordCount < minWords * 0.5) {
+    return wordCount < minWords * 0.3 || wordCount < 40 ? 'A1' : 'A2';
+  }
+  const pct = score / maxScore;
+  if (pct >= 0.90) {
+    if (taskLevel === 'C1') return 'C1';
+    if (taskLevel === 'B2') return 'B2+';
+    return 'B1+';
+  }
+  if (pct >= 0.75) {
+    if (taskLevel === 'C1') return 'C1';
+    if (taskLevel === 'B2') return 'B2';
+    return 'B1';
+  }
+  if (pct >= 0.60) {
+    if (taskLevel === 'C1') return 'B2+';
+    if (taskLevel === 'B2') return 'B1+';
+    return 'A2+';
+  }
+  if (pct >= 0.45) {
+    if (taskLevel === 'C1') return 'B2';
+    if (taskLevel === 'B2') return 'B1';
+    return 'A2';
+  }
+  if (pct >= 0.30) {
+    if (taskLevel === 'C1') return 'B1';
+    if (taskLevel === 'B2') return 'A2';
+    return 'A1';
+  }
+  return 'A1';
+}
+
 /**
  * Strict CEFR scoring calculation based strictly on actual linguistic evidence
  * Calibrated against Goethe-Zertifikat and telc Prüfungsordnungen (Bestehensgrenze: 60 Punkte)
@@ -539,6 +578,7 @@ export function evaluateTextLinguistically(
   const wordCount = countGermanWords(originalText);
   const minWords = task.min_words;
   const maxWords = task.max_words;
+  const lengthRatio = wordCount / minWords;
 
   // 1. Extreme short text check (Under 10 words)
   if (wordCount < 10) {
@@ -555,7 +595,7 @@ export function evaluateTextLinguistically(
         category: 'content_development',
         label_de: 'Inhalt & Entwicklung',
         label_en: 'Content Development',
-        score: Math.max(1, Math.round(wordCount * 0.1)),
+        score: 1,
         max_score: 15,
         feedback_th: 'ไม่มีการพัฒนาเนื้อหาหรือข้อถกเถียงอย่างเป็นรูปธรรม',
       },
@@ -563,7 +603,7 @@ export function evaluateTextLinguistically(
         category: 'vocabulary',
         label_de: 'Wortschatz',
         label_en: 'Vocabulary',
-        score: Math.max(2, Math.round(wordCount * 0.2)),
+        score: Math.max(1, Math.round(wordCount * 0.2)),
         max_score: 20,
         feedback_th: 'คลังคำศัพท์จำกัดมาก ไม่พบคำศัพท์ตามระดับเป้าหมาย',
       },
@@ -571,7 +611,7 @@ export function evaluateTextLinguistically(
         category: 'grammar',
         label_de: 'Grammatik',
         label_en: 'Grammar',
-        score: Math.max(2, Math.round(wordCount * 0.2)),
+        score: Math.max(1, Math.round(wordCount * 0.2)),
         max_score: 20,
         feedback_th: 'โครงสร้างประโยคไม่เพียงพอต่อการวัดความแม่นยำทางไวยากรณ์',
       },
@@ -656,34 +696,166 @@ export function evaluateTextLinguistically(
   // 2. Perform deep linguistic feature extraction
   const feats = analyzeGermanLinguisticFeatures(originalText, task);
 
-  // Strict length completion ratio
-  const lengthRatio = Math.min(1.0, wordCount / minWords);
-  const lengthPenaltyFactor = wordCount < minWords ? Math.pow(lengthRatio, 1.3) : 1.0;
+  // -------------------------------------------------------------------------
+  // 3. CASE A: SEVERE UNDER-LENGTH (wordCount < minWords * 0.5)
+  // Official Goethe/telc rubric: Insufficient language substance (Unterlänge)
+  // Max CEFR is strictly A1 (if < 30% length) or A2 (if 30-50% length)
+  // -------------------------------------------------------------------------
+  if (wordCount < minWords * 0.5) {
+    const isSevere = lengthRatio < 0.28 || wordCount < 40;
+    const taskScore = isSevere ? Math.max(1, Math.min(3, Math.round(wordCount * 0.08))) : Math.max(2, Math.min(5, Math.round(wordCount * 0.06)));
+    const contentScore = isSevere ? 1 : Math.max(1, Math.min(3, Math.round(wordCount * 0.035)));
+    const vocabScore = isSevere ? Math.max(2, Math.min(4, Math.round(wordCount * 0.1))) : Math.max(3, Math.min(6, Math.round(wordCount * 0.07)));
+    const grammarScore = isSevere ? Math.max(2, Math.min(4, Math.round(wordCount * 0.1))) : Math.max(3, Math.min(6, Math.round(wordCount * 0.07)));
+    const cohesionScore = isSevere ? 1 : Math.max(1, Math.min(3, Math.round(wordCount * 0.03)));
+    const registerScore = 1;
+    const mechanicsScore = isSevere ? Math.max(1, Math.min(2, Math.round(wordCount * 0.05))) : Math.max(1, Math.min(3, Math.round(wordCount * 0.04)));
 
-  // Excessive length penalty if over 160% of max_words
+    const assignedCefr: ExtendedCEFR = isSevere ? 'A1' : 'A2';
+
+    const rawCategories: CategoryScoreItem[] = [
+      {
+        category: 'task_fulfillment',
+        label_de: 'Aufgabenbewältigung',
+        label_en: 'Task Fulfillment',
+        score: taskScore,
+        max_score: 20,
+        feedback_th: `ความยาวเพียง ${wordCount} คำ ต่ำกว่าเกณฑ์ข้อสอบอย่างยิ่ง (${minWords}–${maxWords} คำ) ไม่สามารถตอบประเด็นข้อสอบ (Leitpunkte) ได้ตามเกณฑ์มาตรฐาน`,
+      },
+      {
+        category: 'content_development',
+        label_de: 'Inhalt & Entwicklung',
+        label_en: 'Content Development',
+        score: contentScore,
+        max_score: 15,
+        feedback_th: 'เนื้อหาสั้นเกินไป ขาดการพัฒนาประเด็นความคิดและไม่มีโครงสร้างย่อหน้า (บทนำ เนื้อหา บทสรุป)',
+      },
+      {
+        category: 'vocabulary',
+        label_de: 'Wortschatz',
+        label_en: 'Vocabulary',
+        score: vocabScore,
+        max_score: 20,
+        feedback_th: `คลังคำศัพท์จำกัดมาก ข้อมูลคำศัพท์ไม่เพียงพอต่อการวัดผลทักษะระดับ ${task.cefr_level}`,
+      },
+      {
+        category: 'grammar',
+        label_de: 'Grammatik',
+        label_en: 'Grammar',
+        score: grammarScore,
+        max_score: 20,
+        feedback_th: `ข้อความสั้นเกินไป ไม่เพียงพอต่อการวัดความแม่นยำของไวยากรณ์ระดับ ${task.cefr_level} ขาดรูปประโยคซับซ้อนตามมาตรฐาน`,
+      },
+      {
+        category: 'cohesion',
+        label_de: 'Kohärenz & Kohäsion',
+        label_en: 'Cohesion',
+        score: cohesionScore,
+        max_score: 15,
+        feedback_th: 'ขาดคำเชื่อมและการร้อยเรียงข้อความอย่างเป็นระบบ',
+      },
+      {
+        category: 'register',
+        label_de: 'Register & Stil',
+        label_en: 'Register & Style',
+        score: registerScore,
+        max_score: 5,
+        feedback_th: 'ข้อมูลภาษาไม่เพียงพอต่อการประเมินระดับความเหมาะสมของภาษา',
+      },
+      {
+        category: 'mechanics',
+        label_de: 'Rechtschreibung',
+        label_en: 'Mechanics',
+        score: mechanicsScore,
+        max_score: 5,
+        feedback_th: 'ข้อมูลตัวอย่างข้อความสั้นเกินไปสำหรับการประเมินอักขรวิธีเต็มรูปแบบ',
+      },
+    ];
+
+    const calc = calculateTotalScore(rawCategories);
+    const weaknesses = [
+      `จำนวนคำที่เขียนได้ (${wordCount} คำ) ต่ำกว่าเกณฑ์ขั้นต่ำ ${minWords} คำอย่างมาก (คิดเป็นเพียง ${Math.round(lengthRatio * 100)}% ของเกณฑ์)`,
+      'คะแนนรวมยังไม่ถึงเกณฑ์ผ่านขั้นต่ำ 60% (Bestehensgrenze) ของสถาบันเกอเธ่และ telc',
+      `ข้อมูลภาษาไม่เพียงพอสำหรับการประเมินความสามารถระดับ ${task.cefr_level}`,
+    ];
+    const strengths = ['สามารถเริ่มต้นสื่อสารสาระสำคัญเบื้องต้นเป็นภาษาเยอรมันได้'];
+
+    let correctedVersion = originalText;
+    feats.detectedErrors.forEach((err) => {
+      correctedVersion = correctedVersion.replace(err.original_text, err.corrected_text);
+    });
+
+    return {
+      id: `assess-${Date.now()}`,
+      submission_id: `sub-${Date.now()}`,
+      task_id: task.id,
+      task_title: task.title,
+      task_level: task.cefr_level,
+      task_category: task.category,
+      original_text: originalText,
+      word_count: wordCount,
+      total_score: calc.total,
+      grade: calc.grade,
+      cefr_estimate: assignedCefr,
+      cefr_confidence: 'high',
+      cefr_summary_th: `ระดับที่ประเมินได้จากข้อเขียนจริงคือ ${assignedCefr} (คะแนนรวม ${calc.total}/100 เกรด ${calc.grade} • ยังไม่ผ่านเกณฑ์ขั้นต่ำ 60% Nicht bestanden) เนื่องจากความยาว (${wordCount} คำ) ต่ำกว่า 50% ของเกณฑ์ขั้นต่ำ (${minWords} คำ) ตามระเบียบข้อสอบสถาบันเกอเธ่และ telc`,
+      main_weakness_th: weaknesses[0],
+      main_strength_th: strengths[0],
+      cefr_profile: {
+        task_fulfillment: assignedCefr,
+        content_development: assignedCefr,
+        vocabulary: assignedCefr,
+        grammar: assignedCefr,
+        cohesion: assignedCefr,
+        register: assignedCefr,
+        mechanics: assignedCefr,
+      },
+      category_scores: calc.verifiedScores,
+      errors: feats.detectedErrors,
+      strengths,
+      weaknesses,
+      writing_versions: {
+        corrected: correctedVersion,
+        b2_improved: `[ฉบับปรับปรุง B2 สำหรับหัวข้อ: ${task.title}]\n\n${correctedVersion}\n\n(คำแนะนำ: นำคำเชื่อมคู่ เช่น nicht nur ... sondern auch หรือ zwar ... aber มาช่วยขยายเหตุผล)`,
+        c1_model: `[ฉบับแบบอย่างวิชาการระดับ C1 สำหรับหัวข้อ: ${task.title}]\n\nZweifelsohne erfordert die Thematik „${task.title}“ eine differenzierte Auseinandersetzung. Im Hinblick auf die gegenwärtigen gesellschaftlichen Entwicklungen lässt sich konstatieren, dass fundierte Maßnahmen unerlässlich sind.`,
+      },
+      learning_recommendations: [
+        {
+          topic: 'Wortschatzerweiterung und Textlänge',
+          priority: 'high',
+          reason_th: `ความยาว ${wordCount} คำ ยังต่ำกว่าเกณฑ์ขั้นต่ำ ${minWords} คำ`,
+          lesson_id: 'lesson-nebensaetze',
+          action_th: 'ฝึกขยายความในแต่ละประเด็น Leitpunkte ให้ได้อย่างน้อย 3-4 ประโยคต่อประเด็น',
+        },
+      ],
+      rubric_version: '3.0',
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // 4. CASE B: REGULAR ASSESSMENT (wordCount >= minWords * 0.5)
+  // -------------------------------------------------------------------------
+  const lengthPenaltyFactor = wordCount < minWords ? Math.pow(lengthRatio, 1.25) : 1.0;
   const excessivePenalty = wordCount > maxWords * 1.6 ? 0.92 : 1.0;
 
-  // Error deductions
   const majorGrammarErrors = feats.detectedErrors.filter((e) => e.category === 'GRAMMAR').length;
   const mechanicsErrors = feats.detectedErrors.filter((e) => e.category === 'MECHANICS').length;
   const vocabErrors = feats.detectedErrors.filter((e) => e.category === 'VOCABULARY').length;
   const styleErrors = feats.detectedErrors.filter((e) => e.category === 'STYLE').length;
 
   // 1. Task Fulfillment (Max 20)
-  // Determined by: length completion (45%), requirement checklist match (35%), formality (20%)
   const reqRatio = task.requirements.length > 0 ? feats.matchedRequirementKeywords / task.requirements.length : 0.8;
-  const rawTaskScore = 20 * (0.45 * lengthRatio + 0.35 * Math.min(1.0, reqRatio + 0.3) + 0.20 * feats.formalityScore);
+  const rawTaskScore = 20 * (0.45 * Math.min(1.0, lengthRatio) + 0.35 * Math.min(1.0, reqRatio + 0.3) + 0.20 * feats.formalityScore);
   const taskScore = Math.max(2, Math.min(20, Math.round(rawTaskScore * excessivePenalty)));
 
   // 2. Content Development (Max 15)
-  // Determined by: paragraph structure, sentence depth, and argument flow
   const paragraphBonus = feats.paragraphCount >= 3 ? 1.0 : feats.paragraphCount === 2 ? 0.8 : 0.6;
   const avgSentenceScore = feats.avgSentenceLength >= 10 && feats.avgSentenceLength <= 28 ? 1.0 : 0.85;
   const rawContentScore = 15 * lengthPenaltyFactor * paragraphBonus * avgSentenceScore;
   const contentScore = Math.max(2, Math.min(15, Math.round(rawContentScore)));
 
   // 3. Vocabulary (Max 20)
-  // Determined by: lexical diversity (type-token ratio), B2/C1 academic vocabulary count, minus deductions
   const lexicalRichness = Math.min(1.0, feats.typeTokenRatio * 1.55);
   const advancedBonus = Math.min(4.5, feats.b2VocabCount * 0.7 + feats.c1VocabCount * 1.3);
   const vocabDeduction = vocabErrors * 2.0;
@@ -691,14 +863,12 @@ export function evaluateTextLinguistically(
   const vocabScore = Math.max(3, Math.min(20, Math.round(baseVocab)));
 
   // 4. Grammar (Max 20)
-  // Strict CEFR rules: Verbletztstellung and Inversion are core B1/B2/C1 pillars
   const complexClauseBonus = Math.min(4.0, feats.subordinateClauseCount * 0.8);
   const grammarDeduction = majorGrammarErrors * 2.8;
   const baseGrammar = (16.5 + complexClauseBonus - grammarDeduction) * (0.5 + 0.5 * lengthPenaltyFactor);
   const grammarScore = Math.max(2, Math.min(20, Math.round(baseGrammar)));
 
   // 5. Cohesion & Linkers (Max 15)
-  // Determined by: connectors count, zweiteilige Konnektoren bonus, and paragraph flow
   const connectorRatio = Math.min(1.0, feats.connectorsCount / Math.max(3, Math.round(wordCount / 38)));
   const connectorBonus = feats.hasZweiteiligeKonnektoren ? 1.5 : 0;
   const baseCohesion = (14.0 * (0.6 * connectorRatio + 0.4 * paragraphBonus) + connectorBonus) * (0.55 + 0.45 * lengthPenaltyFactor);
@@ -712,7 +882,53 @@ export function evaluateTextLinguistically(
   // 7. Mechanics (Max 5)
   const mechanicsScore = Math.max(1, Math.min(5, Math.round(5.0 - mechanicsErrors * 0.9)));
 
-  // Construct verified categories
+  // Dynamic feedback generator ensuring ZERO contradictions between score and feedback
+  const taskFeedback = taskScore >= 16
+    ? 'ตอบประเด็นและข้อกำหนดของโจทย์ได้ครบถ้วน ชัดเจน และตรงเป้าหมายตามเกณฑ์'
+    : taskScore >= 12
+    ? 'ตอบประเด็นส่วนใหญ่ได้ตรงตามเป้าหมาย แต่อาจขาดรายละเอียดในบางข้อกำหนด'
+    : `ความยาว ${wordCount} คำ ยังต่ำกว่าเกณฑ์ข้อสอบ (${minWords}–${maxWords} คำ) ส่งผลให้การตอบประเด็นไม่สมบูรณ์`;
+
+  const contentFeedback = contentScore >= 12
+    ? 'มีการลำดับเค้าโครงความคิดเป็นย่อหน้าชัดเจน มีเหตุผลและตัวอย่างสนับสนุนอย่างเป็นระบบ'
+    : contentScore >= 9
+    ? 'มีการลำดับความคิดพอใช้ ควรเพิ่มตัวอย่างสนับสนุนและเชื่อมโยงให้ลึกซึ้งยิ่งขึ้น'
+    : 'ควรแบ่งย่อหน้าให้ชัดเจนอย่างน้อย 3 ย่อหน้า (บทนำ, เนื้อหาหลัก, บทสรุป) และพัฒนาประเด็นให้ลึกซึ้งขึ้น';
+
+  const vocabFeedback = vocabScore >= 16
+    ? (feats.b2VocabCount + feats.c1VocabCount >= 3
+      ? `พบคำศัพท์และสำนวนระดับวิชาการ B2/C1 (${feats.b2VocabCount + feats.c1VocabCount} คำ) ช่วยยกระดับความสละสลวย`
+      : 'ใช้คลังคำศัพท์ได้หลากหลายและตรงตามบริบท')
+    : vocabScore >= 12
+    ? 'คลังคำศัพท์อยู่ในเกณฑ์สื่อสารทั่วไป ควรเพิ่มคำศัพท์วิชาการและสำนวนเฉพาะทางระดับ B2/C1'
+    : 'คลังคำศัพท์ค่อนข้างจำกัด มักใช้คำพื้นฐานซ้ำๆ ควรเพิ่มคำศัพท์เฉพาะทางระดับ B2/C1';
+
+  const grammarFeedback = grammarScore >= 16
+    ? (majorGrammarErrors === 0
+      ? 'ควบคุมไวยากรณ์ ตำแหน่งคำกริยาในประโยคหลักและอนุประโยคได้ถูกต้องแม่นยำ'
+      : `โครงสร้างประโยคซับซ้อนดี แต่มีจุดคลาดเคลื่อนทางไวยากรณ์ ${majorGrammarErrors} จุด`)
+    : grammarScore >= 12
+    ? (majorGrammarErrors === 0
+      ? 'ไวยากรณ์พื้นฐานถูกต้อง ควรเพิ่มรูปประโยครองซับซ้อน (Nebensätze, Passiv) เพื่อยกระดับคะแนน'
+      : `ตรวจพบจุดคลาดเคลื่อนทางไวยากรณ์ ${majorGrammarErrors} จุด (เน้นตำแหน่งกริยาท้ายประโยคใน Nebensätze และการสลับประธานกริยา)`)
+    : (majorGrammarErrors > 0
+      ? `พบข้อผิดพลาดทางไวยากรณ์ ${majorGrammarErrors} จุด ส่งผลกระทบต่อความเข้าใจของผู้อ่าน`
+      : 'รูปประโยคยังเรียบง่ายเกินไป ไม่เพียงพอที่จะแสดงความแม่นยำของไวยากรณ์ระดับสูง');
+
+  const cohesionFeedback = cohesionScore >= 12
+    ? `มีการใช้คำเชื่อมประโยค ${feats.connectorsCount} จุด ทำให้ข้อความมีความต่อเนื่องและไหลลื่น`
+    : cohesionScore >= 9
+    ? 'มีการใช้คำเชื่อมพื้นฐาน ควรเพิ่มคำเชื่อมความสัมพันธ์ เช่น deshalb, obwohl, einerseits... andererseits, folglich'
+    : 'ขาดคำเชื่อมแสดงความสัมพันธ์ระหว่างประโยค ทำให้ข้อความขาดความต่อเนื่อง';
+
+  const registerFeedback = registerScore >= 4
+    ? 'ระดับความสุภาพและสำนวนเปิด-ปิดตรงตามประเภทงานเขียน'
+    : 'ควรปรับระดับภาษา คำขึ้นต้น และคำลงท้ายให้เข้ากับบริบทที่เป็นทางการมากยิ่งขึ้น';
+
+  const mechanicsFeedback = mechanicsScore >= 4
+    ? 'การสะกดคำ ตัวพิมพ์ใหญ่ของคำนาม และเครื่องหมายวรรคตอนถูกต้องดี'
+    : `พบจุดที่ตัวพิมพ์ใหญ่ของคำนามหรือเครื่องหมายวรรคตอนคลาดเคลื่อน ${mechanicsErrors} จุด`;
+
   const rawCategories: CategoryScoreItem[] = [
     {
       category: 'task_fulfillment',
@@ -720,9 +936,7 @@ export function evaluateTextLinguistically(
       label_en: 'Task Fulfillment',
       score: taskScore,
       max_score: 20,
-      feedback_th: lengthRatio >= 0.95
-        ? 'ตอบประเด็นและข้อกำหนดของโจทย์ได้ครบถ้วน ชัดเจน และตรงเป้าหมายตามเกณฑ์'
-        : `ความยาว ${wordCount} คำ ยังต่ำกว่าเกณฑ์ข้อสอบ (${minWords}–${maxWords} คำ) ส่งผลให้การพัฒนาประเด็นไม่สมบูรณ์`,
+      feedback_th: taskFeedback,
     },
     {
       category: 'content_development',
@@ -730,9 +944,7 @@ export function evaluateTextLinguistically(
       label_en: 'Content Development',
       score: contentScore,
       max_score: 15,
-      feedback_th: feats.paragraphCount >= 3
-        ? 'มีการลำดับเค้าโครงความคิดเป็นย่อหน้าชัดเจน มีเหตุผลและตัวอย่างสนับสนุนอย่างเป็นระบบ'
-        : 'ควรแบ่งย่อหน้าให้ชัดเจนอย่างน้อย 3 ย่อหน้า (บทนำ, เนื้อหาหลัก, บทสรุป)',
+      feedback_th: contentFeedback,
     },
     {
       category: 'vocabulary',
@@ -740,9 +952,7 @@ export function evaluateTextLinguistically(
       label_en: 'Vocabulary',
       score: vocabScore,
       max_score: 20,
-      feedback_th: feats.b2VocabCount + feats.c1VocabCount >= 4
-        ? `พบคำศัพท์และสำนวนระดับวิชาการ B2/C1 (${feats.b2VocabCount + feats.c1VocabCount} คำ) ช่วยยกระดับความสละสลวย`
-        : 'คลังคำศัพท์อยู่ในเกณฑ์สื่อสารทั่วไป ควรเพิ่มคำศัพท์วิชาการและสำนวนเฉพาะทางระดับ B2/C1',
+      feedback_th: vocabFeedback,
     },
     {
       category: 'grammar',
@@ -750,9 +960,7 @@ export function evaluateTextLinguistically(
       label_en: 'Grammar',
       score: grammarScore,
       max_score: 20,
-      feedback_th: majorGrammarErrors === 0
-        ? 'ควบคุมไวยากรณ์ ตำแหน่งคำกริยาในประโยคหลักและอนุประโยคได้ถูกต้องแม่นยำ'
-        : `ตรวจพบจุดคลาดเคลื่อนทางไวยากรณ์ ${majorGrammarErrors} จุด (เน้นตำแหน่งกริยาท้ายประโยคใน Nebensätze และการสลับประธานกริยา)`,
+      feedback_th: grammarFeedback,
     },
     {
       category: 'cohesion',
@@ -760,9 +968,7 @@ export function evaluateTextLinguistically(
       label_en: 'Cohesion',
       score: cohesionScore,
       max_score: 15,
-      feedback_th: feats.connectorsCount >= 4
-        ? `มีการใช้คำเชื่อมประโยค ${feats.connectorsCount} จุด ทำให้ข้อความมีความต่อเนื่องและไหลลื่น`
-        : 'ควรเพิ่มคำเชื่อมความสัมพันธ์ เช่น deshalb, obwohl, einerseits... andererseits, folglich',
+      feedback_th: cohesionFeedback,
     },
     {
       category: 'register',
@@ -770,9 +976,7 @@ export function evaluateTextLinguistically(
       label_en: 'Register & Style',
       score: registerScore,
       max_score: 5,
-      feedback_th: feats.formalityScore >= 0.9
-        ? 'ระดับความสุภาพและสำนวนเปิด-ปิดตรงตามประเภทงานเขียน'
-        : 'ควรปรับระดับภาษา คำขึ้นต้น และคำลงท้ายให้เข้ากับบริบทที่เป็นทางการมากยิ่งขึ้น',
+      feedback_th: registerFeedback,
     },
     {
       category: 'mechanics',
@@ -780,25 +984,22 @@ export function evaluateTextLinguistically(
       label_en: 'Mechanics',
       score: mechanicsScore,
       max_score: 5,
-      feedback_th: mechanicsErrors === 0
-        ? 'การสะกดคำ ตัวพิมพ์ใหญ่ของคำนาม และเครื่องหมายวรรคตอนถูกต้องดี'
-        : `พบจุดที่ตัวพิมพ์ใหญ่ของคำนามคลาดเคลื่อน ${mechanicsErrors} จุด`,
+      feedback_th: mechanicsFeedback,
     },
   ];
 
   const calc = calculateTotalScore(rawCategories);
 
   // Strict CEFR standard grading curve (Goethe / telc Bestehensgrenze: 60%)
-  // Under 60: Nicht bestanden (Grade E or F)
   let cefrEstimate: ExtendedCEFR = 'B1';
   let cefrConfidence: 'high' | 'medium' | 'low' = 'high';
 
   if (calc.total >= 90 && wordCount >= minWords && majorGrammarErrors === 0) {
     cefrEstimate = task.cefr_level === 'C1' || feats.c1VocabCount >= 3 ? 'C1' : 'B2+';
   } else if (calc.total >= 80 && wordCount >= minWords * 0.9) {
-    cefrEstimate = 'B2';
+    cefrEstimate = task.cefr_level === 'C1' ? 'B2+' : 'B2';
   } else if (calc.total >= 70 && wordCount >= minWords * 0.8) {
-    cefrEstimate = 'B1+';
+    cefrEstimate = task.cefr_level === 'B1' ? 'B1' : 'B1+';
   } else if (calc.total >= 60 && wordCount >= minWords * 0.65) {
     cefrEstimate = 'B1';
   } else if (calc.total >= 50) {
@@ -809,15 +1010,15 @@ export function evaluateTextLinguistically(
     cefrEstimate = 'A1';
   }
 
-  // Profile breakdown
+  // Profile breakdown with mathematical consistency
   const profile: Record<string, ExtendedCEFR> = {
-    task_fulfillment: taskScore >= 17 ? 'B2+' : taskScore >= 14 ? 'B2' : taskScore >= 11 ? 'B1+' : taskScore >= 8 ? 'B1' : 'A2',
-    content_development: contentScore >= 13 ? 'B2+' : contentScore >= 10 ? 'B2' : contentScore >= 8 ? 'B1' : 'A2',
-    vocabulary: vocabScore >= 17 ? 'B2+' : vocabScore >= 14 ? 'B2' : vocabScore >= 10 ? 'B1+' : vocabScore >= 7 ? 'B1' : 'A2',
-    grammar: grammarScore >= 17 ? 'B2+' : grammarScore >= 13 ? 'B2' : grammarScore >= 9 ? 'B1+' : grammarScore >= 6 ? 'B1' : 'A2',
-    cohesion: cohesionScore >= 13 ? 'B2+' : cohesionScore >= 10 ? 'B2' : cohesionScore >= 7 ? 'B1' : 'A2',
-    register: registerScore >= 4 ? 'B2' : registerScore >= 3 ? 'B1' : 'A2',
-    mechanics: mechanicsScore >= 4 ? 'B2' : mechanicsScore >= 3 ? 'B1' : 'A2',
+    task_fulfillment: getSubskillCefr(taskScore, 20, task.cefr_level, wordCount, minWords),
+    content_development: getSubskillCefr(contentScore, 15, task.cefr_level, wordCount, minWords),
+    vocabulary: getSubskillCefr(vocabScore, 20, task.cefr_level, wordCount, minWords),
+    grammar: getSubskillCefr(grammarScore, 20, task.cefr_level, wordCount, minWords),
+    cohesion: getSubskillCefr(cohesionScore, 15, task.cefr_level, wordCount, minWords),
+    register: getSubskillCefr(registerScore, 5, task.cefr_level, wordCount, minWords),
+    mechanics: getSubskillCefr(mechanicsScore, 5, task.cefr_level, wordCount, minWords),
   };
 
   // Generate dynamic corrected version by replacing errors
@@ -829,7 +1030,7 @@ export function evaluateTextLinguistically(
   // Dynamic Strengths & Weaknesses based on real stats
   const strengths: string[] = [];
   if (wordCount >= minWords) strengths.push(`เขียนได้ความยาวตามเกณฑ์มาตรฐาน (${wordCount} คำ)`);
-  if (feats.b2VocabCount + feats.c1VocabCount > 0) strengths.push(`มีการใช้คำศัพท์ระดับวิชาการ B2/C1 (${feats.b2VocabCount + feats.c1VocabCount} คำ)`);
+  if (feats.b2VocabCount + feats.c1VocabCount > 0 && wordCount >= minWords * 0.5) strengths.push(`มีการใช้คำศัพท์ระดับวิชาการ B2/C1 (${feats.b2VocabCount + feats.c1VocabCount} คำ)`);
   if (feats.connectorsCount >= 3) strengths.push(`ใช้คำเชื่อมแสดงความสัมพันธ์ของประโยคได้เหมาะสม (${feats.connectorsCount} จุด)`);
   if (feats.hasZweiteiligeKonnektoren) strengths.push('มีการใช้คำเชื่อมคู่ (zweiteilige Konnektoren) ช่วยเพิ่มความลึกซึ้งในการอภิปราย');
   if (feats.paragraphCount >= 3) strengths.push('มีการแบ่งย่อหน้าโครงสร้างอย่างเป็นระเบียบ (บทนำ, เนื้อหา, บทสรุป)');

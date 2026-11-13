@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Award,
   Trophy,
   CheckCircle2,
   AlertTriangle,
   BookOpen,
-  ArrowRight,
   Printer,
   Copy,
   Check,
@@ -14,10 +13,13 @@ import {
   Layers,
   Sparkles,
   Info,
-  ChevronRight,
   PenLine,
+  MessageSquareQuote,
+  Target,
+  XCircle,
 } from 'lucide-react';
 import { AssessmentResult, AssessmentError } from '../types';
+import { normalizeLessonId } from '../utils/assessment-core';
 
 interface AssessmentResultViewProps {
   assessment: AssessmentResult;
@@ -40,16 +42,12 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [savedVocabId, setSavedVocabId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setSelectedError(assessment.errors.length > 0 ? assessment.errors[0] : null);
+  }, [assessment.id]);
+
   const getLessonIdForError = (err: AssessmentError): string => {
-    const text = `${err.rule} ${err.subcategory} ${err.category}`.toLowerCase();
-    if (text.includes('nebensatz') || text.includes('word_order')) return 'lesson-nebensaetze';
-    if (text.includes('inversion') || text.includes('konnektor') || text.includes('cohesion')) return 'lesson-konnektoren-b2';
-    if (text.includes('kasus') || text.includes('dativ') || text.includes('akkusativ')) return 'lesson-kasus';
-    if (text.includes('passiv')) return 'lesson-passiv';
-    if (text.includes('konjunktiv')) return 'lesson-konjunktiv-2';
-    if (text.includes('adjektiv') || text.includes('capitalization')) return 'lesson-adjektivendungen';
-    if (text.includes('nominal')) return 'lesson-nominalisierung';
-    return 'lesson-nebensaetze';
+    return normalizeLessonId(undefined, `${err.rule} ${err.subcategory} ${err.category}`);
   };
 
   const handleCopy = (text: string, label: string) => {
@@ -106,49 +104,63 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
     }
   };
 
-  // Render text with interactive highlighted spans
+  // Render text with interactive highlighted spans using exact verified offsets
   const renderHighlightedText = () => {
-    const raw = assessment.original_text.replace(/\\n/g, '\n');
+    const raw = assessment.original_text.replace(/\r\n/g, '\n');
     if (assessment.errors.length === 0) {
       return <p className="leading-relaxed whitespace-pre-wrap font-sans text-slate-800">{raw}</p>;
     }
 
-    const sorted = [...assessment.errors]
-      .filter((e) => e.original_text && raw.includes(e.original_text))
-      .sort((a, b) => raw.indexOf(a.original_text) - raw.indexOf(b.original_text));
+    const spans = assessment.errors
+      .map((err) => {
+        const hasValidOffsets =
+          typeof err.start_offset === 'number' &&
+          typeof err.end_offset === 'number' &&
+          err.start_offset >= 0 &&
+          err.end_offset > err.start_offset &&
+          err.end_offset <= raw.length;
+        if (hasValidOffsets) {
+          return { err, start: err.start_offset, end: err.end_offset };
+        }
+        const fallbackIdx = err.original_text ? raw.indexOf(err.original_text) : -1;
+        if (fallbackIdx !== -1) {
+          return { err, start: fallbackIdx, end: fallbackIdx + err.original_text.length };
+        }
+        return null;
+      })
+      .filter((s): s is { err: AssessmentError; start: number; end: number } => s !== null)
+      .sort((a, b) => a.start - b.start);
 
     const elements: React.ReactNode[] = [];
     let lastIndex = 0;
 
-    sorted.forEach((err, i) => {
-      const idx = raw.indexOf(err.original_text, lastIndex);
-      if (idx !== -1) {
-        if (idx > lastIndex) {
-          elements.push(
-            <span key={`text-${i}`}>
-              {raw.substring(lastIndex, idx)}
-            </span>
-          );
-        }
-
-        const colors = getCategoryColor(err.category);
-        const isSelected = selectedError?.id === err.id;
-
+    spans.forEach(({ err, start, end }, i) => {
+      if (start < lastIndex) return;
+      if (start > lastIndex) {
         elements.push(
-          <mark
-            key={`err-${err.id}-${i}`}
-            onClick={() => setSelectedError(err)}
-            className={`px-1.5 py-0.5 rounded transition-all font-medium ${colors.highlight} ${
-              isSelected ? 'ring-2 ring-blue-500 font-semibold shadow-xs' : ''
-            }`}
-            title={`คลิกเพื่อดูคำอธิบาย: ${err.explanation_th}`}
-          >
-            {err.original_text}
-          </mark>
+          <span key={`text-${i}`}>
+            {raw.substring(lastIndex, start)}
+          </span>
         );
-
-        lastIndex = idx + err.original_text.length;
       }
+
+      const colors = getCategoryColor(err.category);
+      const isSelected = selectedError?.id === err.id;
+
+      elements.push(
+        <mark
+          key={`err-${err.id}-${i}`}
+          onClick={() => setSelectedError(err)}
+          className={`px-1.5 py-0.5 rounded transition-all font-medium ${colors.highlight} ${
+            isSelected ? 'ring-2 ring-blue-500 font-semibold shadow-xs' : ''
+          }`}
+          title={`คลิกเพื่อดูคำอธิบาย: ${err.explanation_th}`}
+        >
+          {raw.substring(start, end)}
+        </mark>
+      );
+
+      lastIndex = end;
     });
 
     if (lastIndex < raw.length) {
@@ -172,6 +184,21 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               <span className="px-2.5 py-0.5 rounded-md font-bold text-xs bg-blue-50 text-blue-700 border border-blue-200/60">
                 รายงานผลการประเมินวิชาการ (CEFR Assessment Report)
               </span>
+              {assessment.engine === 'ai' ? (
+                <span className="px-2 py-0.5 rounded-md font-bold text-[11px] bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-purple-600" />
+                  <span>
+                    {assessment.model_name === 'gemini-4-hydrogen'
+                      ? 'Gemini 4 Hydrogen AI'
+                      : 'Gemini AI Examiner'}
+                  </span>
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-md font-bold text-[11px] bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
+                  <Award className="w-3 h-3 text-slate-500" />
+                  <span>Linguistic CEFR Evaluator 3.0</span>
+                </span>
+              )}
               <span className="text-xs text-slate-400">
                 {new Date(assessment.created_at).toLocaleDateString('th-TH', {
                   year: 'numeric',
@@ -263,31 +290,31 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
       </div>
 
       {/* Modern Scannable Tabs Navigation */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 overflow-x-auto pb-1 text-xs font-semibold no-scrollbar">
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-2.5 text-xs font-semibold">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
             activeTab === 'overview'
               ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <Trophy className="w-4 h-4" />
-          <span>ภาพรวมคะแนน (Overview)</span>
+          <span>ภาพรวมคะแนน</span>
         </button>
 
         <button
           onClick={() => setActiveTab('interactive')}
-          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
             activeTab === 'interactive'
               ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>ไฮไลต์ข้อความ (Interactive Text)</span>
+          <span>ไฮไลต์ข้อความ</span>
           {assessment.errors.length > 0 && (
-            <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+            <span className={`ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
               activeTab === 'interactive' ? 'bg-white text-blue-700' : 'bg-rose-100 text-rose-700'
             }`}>
               {assessment.errors.length}
@@ -297,43 +324,43 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
 
         <button
           onClick={() => setActiveTab('errors')}
-          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
             activeTab === 'errors'
               ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <AlertTriangle className="w-4 h-4" />
-          <span>จำแนกข้อผิดพลาด (Taxonomy)</span>
+          <span>ตารางข้อผิดพลาด</span>
         </button>
 
         <button
           onClick={() => setActiveTab('versions')}
-          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
             activeTab === 'versions'
               ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>โมเดลงานเขียน 3 ฉบับ (Writing Models)</span>
+          <span>โมเดลงานเขียน 3 ฉบับ</span>
         </button>
 
         <button
           onClick={() => setActiveTab('lessons')}
-          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
             activeTab === 'lessons'
               ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <BookOpen className="w-4 h-4" />
-          <span>บทเรียนแนะนำ (Grammar Lessons)</span>
+          <span>บทเรียนแนะนำ</span>
         </button>
 
         <button
           onClick={() => setActiveTab('rubric')}
-          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
             activeTab === 'rubric'
               ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
@@ -347,6 +374,105 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Individualized AI Examiner Coaching Note */}
+          {assessment.individual_coaching_note_th && (
+            <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+              <div className="flex items-center gap-2 text-sm font-bold text-blue-950">
+                <MessageSquareQuote className="w-4 h-4 text-blue-600" />
+                <span>ข้อเสนอแนะเฉพาะบุคคลจากผู้ตรวจ (Examiner Feedback)</span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-800 leading-relaxed">
+                {assessment.individual_coaching_note_th}
+              </p>
+            </div>
+          )}
+
+          {/* Evidence Calibration Quality Adjustments */}
+          {assessment.quality?.adjustments && assessment.quality.adjustments.length > 0 && (
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs space-y-2">
+              <div className="flex items-center gap-2 font-bold text-slate-800">
+                <Info className="w-4 h-4 text-blue-600" />
+                <span>เกณฑ์การปรับเทียบความสอดคล้องของคะแนนตามหลักฐาน (Score Calibration Audit):</span>
+              </div>
+              <ul className="space-y-1.5 pl-6 list-disc text-slate-600">
+                {assessment.quality.adjustments.map((adj, i) => (
+                  <li key={i} className="leading-relaxed">{adj}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Per-Leitpunkt Requirement Coverage Audit */}
+          {assessment.requirement_evaluations && assessment.requirement_evaluations.length > 0 && (
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-blue-600" />
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      ผลการตรวจประเด็นบังคับรายข้อ (Leitpunkte Check)
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      ตรวจสอบจากเนื้อหาจริงในงานเขียนของคุณเทียบกับคำสั่งโจทย์ทีละประเด็น
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {assessment.requirement_evaluations.map((reqEval, idx) => {
+                  const statusBadge =
+                    reqEval.status === 'fulfilled'
+                      ? {
+                          label: 'ตอบครบถ้วน (Erfüllt)',
+                          cls: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                          icon: <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />,
+                        }
+                      : reqEval.status === 'partial'
+                      ? {
+                          label: 'ตอบบางส่วน (Teilweise)',
+                          cls: 'bg-amber-50 text-amber-800 border-amber-200',
+                          icon: <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />,
+                        }
+                      : {
+                          label: 'ยังไม่ปรากฏในงานเขียน (Fehlt)',
+                          cls: 'bg-rose-50 text-rose-800 border-rose-200',
+                          icon: <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />,
+                        };
+
+                  return (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                          {statusBadge.icon}
+                          <span className="text-xs sm:text-sm font-bold text-slate-900">
+                            {idx + 1}. {reqEval.requirement}
+                          </span>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border self-start shrink-0 ${statusBadge.cls}`}>
+                          {statusBadge.label}
+                        </span>
+                      </div>
+
+                      {reqEval.evidence_quote && (
+                        <div className="text-xs bg-white border border-slate-200/80 rounded-lg px-3 py-2 text-slate-700 italic">
+                          หลักฐานจากงานเขียน: „{reqEval.evidence_quote}“
+                        </div>
+                      )}
+
+                      <p className="text-xs text-slate-700 leading-relaxed">
+                        {reqEval.comment_th}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Strengths & Weaknesses row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-5 space-y-3 shadow-2xs">
@@ -506,7 +632,15 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
 
           {/* Right Inspector Card (5 cols) */}
           <div className="lg:col-span-5 space-y-4">
-            {selectedError ? (
+            {assessment.errors.length === 0 ? (
+              <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-6 text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+                <h4 className="font-bold text-sm text-emerald-900">ไม่พบข้อผิดพลาดทางภาษาที่ต้องแก้ไข</h4>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  โครงสร้างประโยค การผันคำกริยา และการสะกดคำในงานเขียนชิ้นนี้มีความแม่นยำตามเกณฑ์ คุณสามารถดูฉบับยกระดับ B2/C1 เพื่อขยายสำนวนวิชาการได้
+                </p>
+              </div>
+            ) : selectedError ? (
               <div className="bg-white border border-blue-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 sticky top-24">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
@@ -625,50 +759,63 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px] border-y border-slate-100">
-                <tr>
-                  <th className="py-3 px-4">หมวดหมู่</th>
-                  <th className="py-3 px-4">ข้อความเดิม</th>
-                  <th className="py-3 px-4">ข้อความที่ถูกต้อง</th>
-                  <th className="py-3 px-4">คำอธิบายภาษาไทย</th>
-                  <th className="py-3 px-4">กฎไวยากรณ์</th>
-                  <th className="py-3 px-4">ระดับความสำคัญ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {assessment.errors.map((err) => (
-                  <tr key={err.id} className="hover:bg-slate-50/70">
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${getCategoryColor(err.category).badge}`}>
-                        {err.category}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-semibold text-rose-600 line-through">
-                      {err.original_text}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-emerald-700">
-                      {err.corrected_text}
-                    </td>
-                    <td className="py-3 px-4 text-slate-700 max-w-xs leading-relaxed">
-                      {err.explanation_th}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-blue-700">
-                      {err.rule}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${
-                        err.severity === 'major' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {err.severity}
-                      </span>
-                    </td>
+          {assessment.errors.length === 0 ? (
+            <div className="p-8 text-center text-xs text-emerald-800 bg-emerald-50/50 border border-emerald-200 rounded-xl">
+              ไม่พบข้อผิดพลาดด้านไวยากรณ์ คำศัพท์ หรือการสะกดคำในงานเขียนชิ้นนี้
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px] border-y border-slate-100">
+                  <tr>
+                    <th className="py-3 px-4">หมวดหมู่</th>
+                    <th className="py-3 px-4">ข้อความเดิม</th>
+                    <th className="py-3 px-4">ข้อความที่ถูกต้อง</th>
+                    <th className="py-3 px-4">คำอธิบายภาษาไทย</th>
+                    <th className="py-3 px-4">กฎไวยากรณ์</th>
+                    <th className="py-3 px-4">ระดับความสำคัญ</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {assessment.errors.map((err) => (
+                    <tr
+                      key={err.id}
+                      onClick={() => {
+                        setSelectedError(err);
+                        setActiveTab('interactive');
+                      }}
+                      className="hover:bg-blue-50/40 cursor-pointer transition-colors"
+                    >
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${getCategoryColor(err.category).badge}`}>
+                          {err.category}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-rose-600 line-through">
+                        {err.original_text}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-emerald-700">
+                        {err.corrected_text}
+                      </td>
+                      <td className="py-3 px-4 text-slate-700 max-w-xs leading-relaxed">
+                        {err.explanation_th}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-[11px] text-blue-700">
+                        {err.rule}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                          err.severity === 'major' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {err.severity}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -753,7 +900,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             </div>
 
             <p className="text-base font-sans leading-relaxed whitespace-pre-wrap text-slate-800">
-              {versionTab === 'corrected' && assessment.writing_versions.corrected}
+              {versionTab === 'corrected' && (assessment.writing_versions.corrected || assessment.original_text)}
               {versionTab === 'b2_improved' && assessment.writing_versions.b2_improved}
               {versionTab === 'c1_model' && assessment.writing_versions.c1_model}
             </p>
@@ -807,7 +954,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                 </div>
 
                 <button
-                  onClick={() => onOpenLesson(rec.lesson_id || 'lesson-nebensaetze')}
+                  onClick={() => onOpenLesson(normalizeLessonId(rec.lesson_id, rec.topic))}
                   className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
@@ -827,7 +974,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               เกณฑ์การประเมิน 100 คะแนนเต็ม (Assessment Rubric Specification)
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              อ้างอิงกรอบ CEFR 2020 และแนวทางของ Goethe-Zertifikat / Cambridge Assessment
+              อ้างอิงกรอบ CEFR 2020 และแนวทางของ Goethe-Zertifikat / telc
             </p>
           </div>
 
@@ -847,7 +994,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   <td className="py-3.5 px-4 text-center font-bold text-slate-700">20</td>
                   <td className="py-3.5 px-4 text-slate-500">ตอบครบทุกประเด็น, ทำตามข้อกำหนด, ประเภทข้อความถูกต้อง</td>
                   <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'task_fulfillment')?.score || 18}
+                    {assessment.category_scores.find((c) => c.category === 'task_fulfillment')?.score ?? 0}
                   </td>
                 </tr>
                 <tr>
@@ -855,7 +1002,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   <td className="py-3.5 px-4 text-center font-bold text-slate-700">15</td>
                   <td className="py-3.5 px-4 text-slate-500">คุณภาพของเนื้อหา, ความสมเหตุสมผล, ตัวอย่างประกอบ</td>
                   <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'content_development')?.score || 13}
+                    {assessment.category_scores.find((c) => c.category === 'content_development')?.score ?? 0}
                   </td>
                 </tr>
                 <tr>
@@ -863,7 +1010,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   <td className="py-3.5 px-4 text-center font-bold text-slate-700">20</td>
                   <td className="py-3.5 px-4 text-slate-500">Range, Accuracy, Collocations, Context, Paraphrasing</td>
                   <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'vocabulary')?.score || 16}
+                    {assessment.category_scores.find((c) => c.category === 'vocabulary')?.score ?? 0}
                   </td>
                 </tr>
                 <tr>
@@ -871,7 +1018,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   <td className="py-3.5 px-4 text-center font-bold text-slate-700">20</td>
                   <td className="py-3.5 px-4 text-slate-500">Verb Conjugation, Word Order, Cases, Sentence Structure</td>
                   <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'grammar')?.score || 14}
+                    {assessment.category_scores.find((c) => c.category === 'grammar')?.score ?? 0}
                   </td>
                 </tr>
                 <tr>
@@ -879,7 +1026,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   <td className="py-3.5 px-4 text-center font-bold text-slate-700">15</td>
                   <td className="py-3.5 px-4 text-slate-500">Organisation, Paragraphs, Connectors, Flow</td>
                   <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'cohesion')?.score || 13}
+                    {assessment.category_scores.find((c) => c.category === 'cohesion')?.score ?? 0}
                   </td>
                 </tr>
                 <tr>
@@ -887,7 +1034,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   <td className="py-3.5 px-4 text-center font-bold text-slate-700">5</td>
                   <td className="py-3.5 px-4 text-slate-500">Formality, ความเหมาะสมกับผู้อ่าน</td>
                   <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'register')?.score || 4}
+                    {assessment.category_scores.find((c) => c.category === 'register')?.score ?? 0}
                   </td>
                 </tr>
                 <tr>
@@ -895,7 +1042,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   <td className="py-3.5 px-4 text-center font-bold text-slate-700">5</td>
                   <td className="py-3.5 px-4 text-slate-500">Groß-/Kleinschreibung, Kommasetzung, Zeichen</td>
                   <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'mechanics')?.score || 4}
+                    {assessment.category_scores.find((c) => c.category === 'mechanics')?.score ?? 0}
                   </td>
                 </tr>
               </tbody>

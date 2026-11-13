@@ -105,3 +105,25 @@ test('evaluateTextLinguistically detects Nebensatz verb order and noun capitaliz
   assert.ok(nebensatzErr, 'Should detect Nebensatz word order error');
   assert.equal(nebensatzErr?.category, 'GRAMMAR');
 });
+
+test('evaluateTextLinguistically correctly scores 31 words on B2 task with A1 and no contradictory praise', () => {
+  const b2Task = SAMPLE_TASKS.find((t) => t.cefr_level === 'B2') || SAMPLE_TASKS[0];
+  const text31Words = 'In der heutigen Gesellschaft spielen moderne Medien eine sehr große Rolle. Viele Menschen nutzen das Smartphone jeden Tag. Deshalb müssen wir über die Folgen diskutieren, weil es wichtig für unsere Zukunft ist.';
+  const result = evaluateTextLinguistically(b2Task, text31Words);
+
+  assert.equal(result.grade, 'F');
+  assert.equal(result.cefr_estimate, 'A1');
+  assert.equal(result.cefr_profile.grammar, 'A1');
+  assert.equal(result.cefr_profile.task_fulfillment, 'A1');
+  assert.equal(result.cefr_profile.vocabulary, 'A1');
+
+  // Verify grammar feedback does NOT falsely praise a failing short text
+  const grammarItem = result.category_scores.find((c) => c.category === 'grammar');
+  assert.ok(grammarItem, 'Grammar item must exist');
+  assert.ok(!grammarItem.feedback_th.includes('ถูกต้องแม่นยำ'), 'Must not claim grammar is accurate when length is deficient');
+  assert.match(grammarItem.feedback_th, /ข้อความสั้นเกินไป|ไม่เพียงพอ/);
+
+  // Total score must be under 30 (severe under-length)
+  assert.ok(result.total_score <= 25, `Total score should be <= 25 for 31 words on B2 task (actual: ${result.total_score})`);
+});
+

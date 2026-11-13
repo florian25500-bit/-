@@ -94,6 +94,13 @@ export interface LearningRecommendation {
   action_th: string;
 }
 
+export interface RequirementEvaluation {
+  requirement: string;
+  status: 'fulfilled' | 'partial' | 'missing';
+  evidence_quote?: string;
+  comment_th: string;
+}
+
 export interface AssessmentResult {
   id: string;
   submission_id: string;
@@ -110,6 +117,8 @@ export interface AssessmentResult {
   cefr_summary_th: string;
   main_weakness_th: string;
   main_strength_th: string;
+  individual_coaching_note_th?: string;
+  requirement_evaluations?: RequirementEvaluation[];
   cefr_profile: CEFRProfile;
   category_scores: CategoryScoreItem[];
   errors: AssessmentError[];
@@ -118,6 +127,14 @@ export interface AssessmentResult {
   writing_versions: WritingVersions;
   learning_recommendations: LearningRecommendation[];
   rubric_version: string;
+  engine?: 'ai' | 'linguistic_engine';
+  model_name?: string;
+  prompt_version?: string;
+  quality?: {
+    adjustments: string[];
+    is_fallback?: boolean;
+    evidence_score?: number;
+  };
   created_at: string;
 }
 
