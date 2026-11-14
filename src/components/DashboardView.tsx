@@ -14,6 +14,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { AssessmentResult, WritingTask } from '../types';
+import { getAssessmentMaxScore } from '../utils/assessment-core';
+import { calculateGrade } from '../utils/scoring';
 
 interface DashboardViewProps {
   submissions: AssessmentResult[];
@@ -48,40 +50,58 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
   const totalSubmissions = submissions.length;
 
-  const averageScore =
+  const averagePercentage =
     totalSubmissions > 0
       ? Math.round(
-          (submissions.reduce((acc, curr) => acc + curr.total_score, 0) / totalSubmissions) * 10
+          (submissions.reduce((acc, curr) => {
+            const max = getAssessmentMaxScore(curr);
+            return acc + (curr.total_score / max) * 100;
+          }, 0) /
+            totalSubmissions) *
+            10
         ) / 10
       : null;
+
+  const averageGrade = averagePercentage !== null ? calculateGrade(averagePercentage, 100) : null;
 
   const latestSubmission = submissions[0];
   const currentCEFR = latestSubmission?.cefr_estimate || null;
   const confidence = latestSubmission?.cefr_confidence || null;
   const mainWeakness = latestSubmission?.main_weakness_th || null;
 
-  // Compute actual category averages from user submissions
-  const categoryKeys: { key: string; label: string; max: number }[] = [
-    { key: 'task_fulfillment', label: 'Aufgabenbewältigung (ตอบตรงโจทย์)', max: 20 },
-    { key: 'content_development', label: 'Inhalt & Entwicklung (เนื้อหาและการลำดับ)', max: 15 },
-    { key: 'vocabulary', label: 'Wortschatz (คลังคำศัพท์วิชาการ)', max: 20 },
-    { key: 'grammar', label: 'Grammatik (ความถูกต้องของไวยากรณ์)', max: 20 },
-    { key: 'cohesion', label: 'Kohärenz & Kohäsion (การเชื่อมโยงความ)', max: 15 },
-    { key: 'register', label: 'Register & Stil (ระดับภาษาและสไตล์)', max: 5 },
-    { key: 'mechanics', label: 'Rechtschreibung (การสะกดและเครื่องหมาย)', max: 5 },
+  // Compute actual normalized category averages from user submissions (supports both 25-pt A1-A2 & 100-pt B1-C1)
+  const categoryKeys: { key: string; label: string }[] = [
+    { key: 'task_fulfillment', label: 'Aufgabenbewältigung (ตอบตรงโจทย์)' },
+    { key: 'content_development', label: 'Inhalt & Entwicklung (เนื้อหาและการลำดับ)' },
+    { key: 'vocabulary', label: 'Wortschatz (คลังคำศัพท์วิชาการ)' },
+    { key: 'grammar', label: 'Grammatik (ความถูกต้องของไวยากรณ์)' },
+    { key: 'cohesion', label: 'Kohärenz & Kohäsion (การเชื่อมโยงความ)' },
+    { key: 'register', label: 'Register & Stil (ระดับภาษาและสไตล์)' },
+    { key: 'mechanics', label: 'Rechtschreibung (การสะกดและเครื่องหมาย)' },
   ];
 
   const categoryAverages = categoryKeys.map((cat) => {
     if (totalSubmissions === 0) {
-      return { label: cat.label, score: 0, max: cat.max, pct: 0 };
+      return { label: cat.label, pct: 0, earned: 0, possible: 0 };
     }
-    const totalCatScore = submissions.reduce((sum, sub) => {
+    let ratioSum = 0;
+    let earnedSum = 0;
+    let possibleSum = 0;
+    submissions.forEach((sub) => {
       const match = sub.category_scores.find((c) => c.category === cat.key);
-      return sum + (match ? match.score : 0);
-    }, 0);
-    const avg = Math.round((totalCatScore / totalSubmissions) * 10) / 10;
-    const pct = Math.round((avg / cat.max) * 100);
-    return { label: cat.label, score: avg, max: cat.max, pct };
+      if (match && match.max_score > 0) {
+        ratioSum += match.score / match.max_score;
+        earnedSum += match.score;
+        possibleSum += match.max_score;
+      }
+    });
+    const pct = Math.round((ratioSum / totalSubmissions) * 100);
+    return {
+      label: cat.label,
+      pct,
+      earned: Math.round((earnedSum / totalSubmissions) * 10) / 10,
+      possible: Math.round((possibleSum / totalSubmissions) * 10) / 10,
+    };
   });
 
   // Determine weakest category from actual submissions
@@ -174,30 +194,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Average Score */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-            <span>คะแนนเฉลี่ย (100 Pkt.)</span>
+            <span>คะแนนเฉลี่ยรวม (%)</span>
             <Trophy className="w-4 h-4 text-amber-500" />
           </div>
           <div className="flex items-baseline gap-2 pt-1">
             <span className="text-3xl font-black text-slate-900">
-              {averageScore !== null ? averageScore : '—'}
+              {averagePercentage !== null ? `${averagePercentage}%` : '—'}
             </span>
-            {averageScore !== null && (
+            {averageGrade && (
               <span
                 className={`px-2 py-0.5 rounded-md text-xs font-bold border ${
-                  averageScore >= 85
+                  averageGrade === 'A'
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : averageScore >= 70
+                    : averageGrade === 'B'
                     ? 'bg-blue-50 text-blue-700 border-blue-200'
                     : 'bg-amber-50 text-amber-700 border-amber-200'
                 }`}
               >
-                {averageScore >= 85 ? 'Grade A' : averageScore >= 70 ? 'Grade B' : 'Grade C'}
+                Grade {averageGrade}
               </span>
             )}
           </div>
           <p className="text-xs text-slate-500 leading-relaxed pt-1">
             {totalSubmissions > 0
-              ? `คำนวณจากงานเขียนจริงของคุณทั้งหมด ${totalSubmissions} ชิ้น`
+              ? `คำนวณเฉลี่ยตามสัดส่วนเกณฑ์จริง (25/100 คะแนน) จาก ${totalSubmissions} ชิ้น`
               : 'ยังไม่มีคะแนนสะสม เริ่มเขียนงานแรกเพื่อบันทึกสถิติ'}
           </p>
         </div>
@@ -255,7 +275,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   : 'แสดงผลเฉลี่ยเมื่อคุณส่งงานเขียนจริงเข้าระบบ'}
               </p>
             </div>
-            <span className="text-xs text-slate-400 font-medium">เกณฑ์เต็ม 100</span>
+            <span className="text-xs text-slate-400 font-medium">A1–A2 (25) • B1–C1 (100)</span>
           </div>
 
           {totalSubmissions === 0 ? (
@@ -292,7 +312,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           </span>
                         )}
                         <span className="text-slate-500 font-medium">
-                          <strong className="text-slate-900">{cat.score}</strong> / {cat.max} คะแนน ({cat.pct}%)
+                          เฉลี่ย <strong className="text-slate-900">{cat.pct}%</strong>{' '}
+                          <span className="text-[11px] text-slate-400">
+                            ({cat.earned} / {cat.possible})
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -442,7 +465,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {sub.word_count} คำ
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {sub.total_score} / 100
+                      {sub.total_score} / {getAssessmentMaxScore(sub)}
                     </td>
                     <td className="py-3.5 px-4">
                       <span

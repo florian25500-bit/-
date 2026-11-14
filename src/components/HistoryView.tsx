@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { AssessmentResult } from '../types';
+import { getAssessmentMaxScore } from '../utils/assessment-core';
 
 interface HistoryViewProps {
   submissions: AssessmentResult[];
@@ -207,7 +208,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       <span className="text-2xl font-black text-slate-900">
                         {item.total_score}
                       </span>
-                      <span className="text-xs text-slate-400">/ 100</span>
+                      <span className="text-xs text-slate-400">/ {getAssessmentMaxScore(item)}</span>
                     </div>
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-md inline-block border ${
@@ -308,57 +309,77 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
             </div>
 
             {/* Comparison Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Submission A */}
-              <div className="p-5 bg-slate-50/70 rounded-2xl border border-slate-200 space-y-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
-                  ชิ้นที่ 1 ({new Date(subA.created_at).toLocaleDateString('th-TH')})
-                </span>
-                <h4 className="font-bold text-sm text-slate-900">
-                  {subA.task_title}
-                </h4>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl font-black text-slate-900">
-                    {subA.total_score} <span className="text-xs font-normal text-slate-400">/ 100</span>
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                    Grade {subA.grade} ({subA.cefr_estimate || 'ไม่ระบุระดับ'})
-                  </span>
-                </div>
-                <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-slate-200/60">
-                  <div>จำนวนคำ: {subA.word_count} คำ</div>
-                  <div>ข้อผิดพลาดที่พบ: {subA.errors.length} จุด</div>
-                  <div>จุดเด่น: {subA.strengths[0]}</div>
-                </div>
-              </div>
+            {(() => {
+              const maxA = getAssessmentMaxScore(subA);
+              const maxB = getAssessmentMaxScore(subB);
+              const pctA = Math.round((subA.total_score / maxA) * 100);
+              const pctB = Math.round((subB.total_score / maxB) * 100);
+              const sameScale = maxA === maxB;
+              return (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Submission A */}
+                    <div className="p-5 bg-slate-50/70 rounded-2xl border border-slate-200 space-y-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                        ชิ้นที่ 1 ({new Date(subA.created_at).toLocaleDateString('th-TH')})
+                      </span>
+                      <h4 className="font-bold text-sm text-slate-900">
+                        {subA.task_title}
+                      </h4>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl font-black text-slate-900">
+                          {subA.total_score}{' '}
+                          <span className="text-xs font-normal text-slate-400">
+                            / {maxA} ({pctA}%)
+                          </span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                          Grade {subA.grade} ({subA.cefr_estimate || 'ไม่ระบุระดับ'})
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-slate-200/60">
+                        <div>จำนวนคำ: {subA.word_count} คำ</div>
+                        <div>ข้อผิดพลาดที่พบ: {subA.errors.length} จุด</div>
+                        <div>จุดเด่น: {subA.strengths[0] || '—'}</div>
+                      </div>
+                    </div>
 
-              {/* Submission B */}
-              <div className="p-5 bg-slate-50/70 rounded-2xl border border-slate-200 space-y-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
-                  ชิ้นที่ 2 ({new Date(subB.created_at).toLocaleDateString('th-TH')})
-                </span>
-                <h4 className="font-bold text-sm text-slate-900">
-                  {subB.task_title}
-                </h4>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl font-black text-slate-900">
-                    {subB.total_score} <span className="text-xs font-normal text-slate-400">/ 100</span>
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    Grade {subB.grade} ({subB.cefr_estimate || 'ไม่ระบุระดับ'})
-                  </span>
-                </div>
-                <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-slate-200/60">
-                  <div>จำนวนคำ: {subB.word_count} คำ</div>
-                  <div>ข้อผิดพลาดที่พบ: {subB.errors.length} จุด</div>
-                  <div>จุดเด่น: {subB.strengths[0]}</div>
-                </div>
-              </div>
-            </div>
+                    {/* Submission B */}
+                    <div className="p-5 bg-slate-50/70 rounded-2xl border border-slate-200 space-y-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                        ชิ้นที่ 2 ({new Date(subB.created_at).toLocaleDateString('th-TH')})
+                      </span>
+                      <h4 className="font-bold text-sm text-slate-900">
+                        {subB.task_title}
+                      </h4>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl font-black text-slate-900">
+                          {subB.total_score}{' '}
+                          <span className="text-xs font-normal text-slate-400">
+                            / {maxB} ({pctB}%)
+                          </span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          Grade {subB.grade} ({subB.cefr_estimate || 'ไม่ระบุระดับ'})
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-slate-200/60">
+                        <div>จำนวนคำ: {subB.word_count} คำ</div>
+                        <div>ข้อผิดพลาดที่พบ: {subB.errors.length} จุด</div>
+                        <div>จุดเด่น: {subB.strengths[0] || '—'}</div>
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900">
-              💡 <strong>สรุปพัฒนาการ:</strong> ผลต่างคะแนน {Math.abs(subB.total_score - subA.total_score)} คะแนน โดยรักษาความแม่นยำด้านโครงสร้างและคำศัพท์ได้อย่างต่อเนื่อง
-            </div>
+                  <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900">
+                    💡 <strong>สรุปพัฒนาการ:</strong>{' '}
+                    {sameScale
+                      ? `ผลต่างคะแนน ${Math.abs(subB.total_score - subA.total_score)} จาก ${maxA} คะแนน (${Math.abs(pctB - pctA)}%)`
+                      : `ชิ้นที่ 1 ใช้เกณฑ์เต็ม ${maxA} คะแนน (${pctA}%) และชิ้นที่ 2 ใช้เกณฑ์เต็ม ${maxB} คะแนน (${pctB}%) — ผลต่างสัดส่วนคะแนน ${Math.abs(pctB - pctA)}%`}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

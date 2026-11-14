@@ -12,7 +12,7 @@ export const Footer: React.FC = () => {
               DeutschSchreiben AI
             </div>
             <p className="text-slate-500 max-w-md leading-relaxed text-xs">
-              ระบบประเมินงานเขียนภาษาเยอรมันเชิงวิชาการตามกรอบอ้างอิงความสามารถทางภาษาของสหภาพยุโรป (CEFR Companion Volume 2020) ระดับ A1, A2, B1, B2 และ C1 พร้อมเกณฑ์การให้คะแนน 100 คะแนนเต็ม และคำอธิบายข้อผิดพลาดอย่างละเอียดเป็นภาษาไทย
+              ระบบประเมินงานเขียนภาษาเยอรมันเชิงวิชาการตามกรอบอ้างอิงความสามารถทางภาษาของสหภาพยุโรป (CEFR Companion Volume 2020) ระดับ A1, A2, B1, B2 และ C1 พร้อมเกณฑ์การให้คะแนนตามระดับสอบจริง (A1–A2 เต็ม 25 คะแนน และ B1–C1 เต็ม 100 คะแนน) และคำอธิบายข้อผิดพลาดอย่างละเอียดเป็นภาษาไทย
             </p>
             <div className="flex items-center gap-2 text-slate-500 text-[11px] pt-1">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />

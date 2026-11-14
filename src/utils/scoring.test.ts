@@ -6,11 +6,33 @@ import {
   countGermanWords,
   countParagraphs,
   deriveCefrSummary,
+  getRubricMaxScoreForLevel,
+  getRubricWeightsForLevel,
   RUBRIC_WEIGHTS,
+  RUBRIC_WEIGHTS_A1_A2,
 } from './scoring';
 import { CategoryScoreItem } from '../types';
 
-test('calculateGrade maps scores strictly according to specification', () => {
+test('RUBRIC_WEIGHTS_A1_A2 sums to 25 and RUBRIC_WEIGHTS sums to 100', () => {
+  const sum25 = Object.values(RUBRIC_WEIGHTS_A1_A2).reduce((a, b) => a + b, 0);
+  const sum100 = Object.values(RUBRIC_WEIGHTS).reduce((a, b) => a + b, 0);
+  assert.equal(sum25, 25);
+  assert.equal(sum100, 100);
+
+  assert.equal(getRubricMaxScoreForLevel('A1'), 25);
+  assert.equal(getRubricMaxScoreForLevel('A2'), 25);
+  assert.equal(getRubricMaxScoreForLevel('B1'), 100);
+  assert.equal(getRubricMaxScoreForLevel('B2'), 100);
+  assert.equal(getRubricMaxScoreForLevel('C1'), 100);
+  assert.equal(getRubricMaxScoreForLevel('AUTO'), 100);
+  assert.equal(getRubricMaxScoreForLevel('UNSPECIFIED'), 100);
+
+  assert.deepEqual(getRubricWeightsForLevel('A1'), RUBRIC_WEIGHTS_A1_A2);
+  assert.deepEqual(getRubricWeightsForLevel('A2'), RUBRIC_WEIGHTS_A1_A2);
+  assert.deepEqual(getRubricWeightsForLevel('B1'), RUBRIC_WEIGHTS);
+});
+
+test('calculateGrade maps scores strictly for both 100-point and 25-point scales', () => {
   assert.equal(calculateGrade(95), 'A');
   assert.equal(calculateGrade(90), 'A');
   assert.equal(calculateGrade(89), 'B');
@@ -23,9 +45,19 @@ test('calculateGrade maps scores strictly according to specification', () => {
   assert.equal(calculateGrade(50), 'E');
   assert.equal(calculateGrade(49), 'F');
   assert.equal(calculateGrade(20), 'F');
+
+  // 25-point scale (A1-A2)
+  assert.equal(calculateGrade(25, 25), 'A');
+  assert.equal(calculateGrade(23, 25), 'A');
+  assert.equal(calculateGrade(20, 25), 'B');
+  assert.equal(calculateGrade(18, 25), 'C');
+  assert.equal(calculateGrade(15, 25), 'D');
+  assert.equal(calculateGrade(13, 25), 'E');
+  assert.equal(calculateGrade(12, 25), 'F');
+  assert.equal(calculateGrade(0, 25), 'F');
 });
 
-test('calculateTotalScore clamps individual category scores and computes sum and grade', () => {
+test('calculateTotalScore clamps individual category scores and supports both 100-pt and A1-A2 25-pt rubrics', () => {
   const sampleScores: CategoryScoreItem[] = [
     { category: 'task_fulfillment', label_de: 'Aufgabenbewältigung', label_en: 'Task', score: 18, max_score: 20, feedback_th: 'ดี' },
     { category: 'content_development', label_de: 'Inhalt', label_en: 'Content', score: 13, max_score: 15, feedback_th: 'ดี' },
@@ -36,9 +68,26 @@ test('calculateTotalScore clamps individual category scores and computes sum and
     { category: 'mechanics', label_de: 'Rechtschreibung', label_en: 'Mechanics', score: 3, max_score: 5, feedback_th: 'ดี' },
   ];
 
-  const result = calculateTotalScore(sampleScores);
-  assert.equal(result.total, 82);
-  assert.equal(result.grade, 'B');
+  const result100 = calculateTotalScore(sampleScores, 'B2');
+  assert.equal(result100.total, 82);
+  assert.equal(result100.maxTotal, 100);
+  assert.equal(result100.grade, 'B');
+
+  const a1OverScores: CategoryScoreItem[] = [
+    { category: 'task_fulfillment', label_de: 'Aufgabenbewältigung', label_en: 'Task', score: 9, max_score: 6, feedback_th: 'ดี' },
+    { category: 'content_development', label_de: 'Inhalt', label_en: 'Content', score: 3, max_score: 3, feedback_th: 'ดี' },
+    { category: 'vocabulary', label_de: 'Wortschatz', label_en: 'Vocab', score: 4, max_score: 5, feedback_th: 'ดี' },
+    { category: 'grammar', label_de: 'Grammatik', label_en: 'Grammar', score: 4, max_score: 5, feedback_th: 'ดี' },
+    { category: 'cohesion', label_de: 'Kohärenz', label_en: 'Cohesion', score: 2, max_score: 3, feedback_th: 'ดี' },
+    { category: 'register', label_de: 'Register', label_en: 'Register', score: 1, max_score: 1, feedback_th: 'ดี' },
+    { category: 'mechanics', label_de: 'Rechtschreibung', label_en: 'Mechanics', score: 2, max_score: 2, feedback_th: 'ดี' },
+  ];
+
+  const resultA1 = calculateTotalScore(a1OverScores, 'A1');
+  // 6 + 3 + 4 + 4 + 2 + 1 + 2 = 22 / 25 (88% -> B)
+  assert.equal(resultA1.total, 22);
+  assert.equal(resultA1.maxTotal, 25);
+  assert.equal(resultA1.grade, 'B');
 });
 
 test('countGermanWords handles German umlauts and punctuation properly', () => {

@@ -22,9 +22,12 @@ import {
 import { AssessmentResult, AssessmentError } from '../types';
 import {
   buildGoetheExamVerdict,
-  GOETHE_PRAEDIKAT_SCALE,
+  getAssessmentMaxScore,
+  getGoethePassThreshold,
+  getGoethePraedikatScale,
   normalizeLessonId,
 } from '../utils/assessment-core';
+import { getRubricWeightsForLevel } from '../utils/scoring';
 
 interface AssessmentResultViewProps {
   assessment: AssessmentResult;
@@ -47,14 +50,26 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [savedVocabId, setSavedVocabId] = useState<string | null>(null);
 
+  const maxTotalScore = getAssessmentMaxScore(assessment);
   const goetheVerdict =
     assessment.goethe_verdict ||
     buildGoetheExamVerdict(
       assessment.total_score,
       assessment.category_scores,
       assessment.task_level,
-      assessment.assessment_mode || 'exam'
+      assessment.assessment_mode || 'exam',
+      maxTotalScore
     );
+  const goetheMaxScore = goetheVerdict.max_score || maxTotalScore;
+  const goetheScore =
+    typeof goetheVerdict.score === 'number'
+      ? goetheVerdict.score
+      : Math.round(assessment.total_score);
+  const goethePassThreshold = goetheVerdict.pass_threshold || getGoethePassThreshold(goetheMaxScore);
+  const praedikatScale = getGoethePraedikatScale(goetheMaxScore);
+  const activeWeights = getRubricWeightsForLevel(
+    maxTotalScore === 25 ? 'A1' : assessment.task_level
+  );
 
   useEffect(() => {
     setSelectedError(assessment.errors.length > 0 ? assessment.errors[0] : null);
@@ -217,7 +232,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               >
                 <ShieldCheck className="w-3 h-3" />
                 <span>
-                  Goethe: {goetheVerdict.passed ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์'} ({goetheVerdict.score}/100 •{' '}
+                  Goethe: {goetheVerdict.passed ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์'} ({goetheScore}/{goetheMaxScore} •{' '}
                   {goetheVerdict.praedikat_de})
                 </span>
               </span>
@@ -250,7 +265,10 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               {assessment.task_title}
             </h1>
             <p className="text-xs text-slate-500">
-              ประเภท: {assessment.task_category} •{' '}
+              ประเภท:{' '}
+              {assessment.task_category ||
+                (assessment.assessment_mode === 'free' ? 'งานเขียนอิสระ' : 'ข้อสอบเขียน')}{' '}
+              •{' '}
               {assessment.task_level === 'UNSPECIFIED'
                 ? 'เกณฑ์ระดับ: ประเมินอิสระ (ไม่กำหนดระดับ)'
                 : `ระดับเป้าหมาย: Niveau ${assessment.task_level}`}{' '}
@@ -275,7 +293,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                 <span className="text-2xl font-black text-slate-900">
                   {assessment.total_score}
                 </span>
-                <span className="text-xs text-slate-400">/ 100</span>
+                <span className="text-xs text-slate-400">/ {maxTotalScore}</span>
               </div>
             </div>
 
@@ -432,7 +450,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>เกณฑ์ Rubric 100 คะแนน</span>
+          <span>เกณฑ์ Rubric {maxTotalScore} คะแนน</span>
         </button>
       </div>
 
@@ -496,18 +514,18 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                       goetheVerdict.passed ? 'text-emerald-600' : 'text-rose-600'
                     }`}
                   >
-                    {goetheVerdict.score}
+                    {goetheScore}
                   </span>
-                  <span className="text-xs text-slate-400"> / 100</span>
+                  <span className="text-xs text-slate-400"> / {goetheMaxScore}</span>
                 </div>
                 <div className="text-center pr-3 border-r border-slate-200">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                     เกณฑ์ผ่านขั้นต่ำ
                   </span>
                   <span className="text-xl font-extrabold text-slate-800">
-                    {goetheVerdict.pass_threshold}
+                    {goethePassThreshold}
                   </span>
-                  <span className="text-xs text-slate-400"> / 100</span>
+                  <span className="text-xs text-slate-400"> / {goetheMaxScore}</span>
                 </div>
                 <div className="text-center">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
@@ -531,7 +549,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-xs sm:text-sm font-bold text-slate-900">
-                  เกณฑ์การตรวจทางการของ Goethe-Institut ที่ใช้ลงคะแนน (Offizielle Bewertungskriterien Schreiben — 100 Punkte)
+                  เกณฑ์การตรวจทางการของ Goethe-Institut ที่ใช้ลงคะแนน (Offizielle Bewertungskriterien Schreiben — {goetheMaxScore} Punkte)
                 </h3>
                 <span className="text-[11px] text-slate-500">
                   สรุปคะแนนจริงที่ลงให้ครบทั้ง 4 ด้านทางการ
@@ -599,14 +617,14 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                 ตารางเกณฑ์ตัดสินผลสอบทางการ Goethe-Institut (Prädikate):
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
-                {GOETHE_PRAEDIKAT_SCALE.map((tier) => {
+                {praedikatScale.map((tier) => {
                   const isActive = tier.praedikat_de === goetheVerdict.praedikat_de;
                   return (
                     <div
                       key={tier.praedikat_de}
                       className={`p-2 rounded-lg border transition-colors ${
                         isActive
-                          ? tier.min >= 60
+                          ? tier.min >= goethePassThreshold
                             ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400'
                             : 'bg-rose-50 border-rose-400 text-rose-950 font-bold ring-1 ring-rose-400'
                           : 'bg-slate-50/70 border-slate-200/70 text-slate-600'
@@ -762,11 +780,11 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   รายละเอียดคะแนนทั้ง 7 หมวด (Kriterienbewertung)
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  ประเมินอย่างเป็นกลางตามเกณฑ์ Rubric 100 คะแนนเต็ม
+                  ประเมินอย่างเป็นกลางตามเกณฑ์ Rubric {maxTotalScore} คะแนนเต็ม
                 </p>
               </div>
               <span className="text-xs text-slate-500 font-semibold">
-                คะแนนรวม: {assessment.total_score} / 100
+                คะแนนรวม: {assessment.total_score} / {maxTotalScore}
               </span>
             </div>
 
@@ -1225,10 +1243,11 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-6">
           <div>
             <h3 className="text-base font-bold text-slate-900">
-              เกณฑ์การประเมิน 100 คะแนนเต็ม (Assessment Rubric Specification)
+              เกณฑ์การประเมิน {maxTotalScore} คะแนนเต็ม (Assessment Rubric Specification —{' '}
+              {maxTotalScore === 25 ? 'ระดับ A1–A2' : 'ระดับ B1–C1'})
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              อ้างอิงกรอบ CEFR 2020 และแนวทางของ Goethe-Zertifikat / telc
+              อ้างอิงกรอบ CEFR 2020 และแนวทางของ Goethe-Zertifikat / telc (เกณฑ์ผ่าน {goethePassThreshold} / {maxTotalScore} คะแนน)
             </p>
           </div>
 
@@ -1243,68 +1262,74 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                <tr>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900">1. Aufgabenbewältigung (Task Fulfillment)</td>
-                  <td className="py-3.5 px-4 text-center font-bold text-slate-700">20</td>
-                  <td className="py-3.5 px-4 text-slate-500">ตอบครบทุกประเด็น, ทำตามข้อกำหนด, ประเภทข้อความถูกต้อง</td>
-                  <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'task_fulfillment')?.score ?? 0}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900">2. Inhalt & Entwicklung (Content Development)</td>
-                  <td className="py-3.5 px-4 text-center font-bold text-slate-700">15</td>
-                  <td className="py-3.5 px-4 text-slate-500">คุณภาพของเนื้อหา, ความสมเหตุสมผล, ตัวอย่างประกอบ</td>
-                  <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'content_development')?.score ?? 0}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900">3. Wortschatz (Vocabulary)</td>
-                  <td className="py-3.5 px-4 text-center font-bold text-slate-700">20</td>
-                  <td className="py-3.5 px-4 text-slate-500">Range, Accuracy, Collocations, Context, Paraphrasing</td>
-                  <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'vocabulary')?.score ?? 0}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900">4. Grammatik (Grammar)</td>
-                  <td className="py-3.5 px-4 text-center font-bold text-slate-700">20</td>
-                  <td className="py-3.5 px-4 text-slate-500">Verb Conjugation, Word Order, Cases, Sentence Structure</td>
-                  <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'grammar')?.score ?? 0}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900">5. Kohärenz & Kohäsion (Cohesion)</td>
-                  <td className="py-3.5 px-4 text-center font-bold text-slate-700">15</td>
-                  <td className="py-3.5 px-4 text-slate-500">Organisation, Paragraphs, Connectors, Flow</td>
-                  <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'cohesion')?.score ?? 0}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900">6. Register & Stil (Register & Style)</td>
-                  <td className="py-3.5 px-4 text-center font-bold text-slate-700">5</td>
-                  <td className="py-3.5 px-4 text-slate-500">Formality, ความเหมาะสมกับผู้อ่าน</td>
-                  <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'register')?.score ?? 0}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900">7. Rechtschreibung (Mechanics)</td>
-                  <td className="py-3.5 px-4 text-center font-bold text-slate-700">5</td>
-                  <td className="py-3.5 px-4 text-slate-500">Groß-/Kleinschreibung, Kommasetzung, Zeichen</td>
-                  <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
-                    {assessment.category_scores.find((c) => c.category === 'mechanics')?.score ?? 0}
-                  </td>
-                </tr>
+                {[
+                  {
+                    key: 'task_fulfillment' as const,
+                    title: '1. Aufgabenbewältigung (Task Fulfillment)',
+                    sub: 'ตอบครบทุกประเด็น, ทำตามข้อกำหนด, ประเภทข้อความถูกต้อง',
+                    max: activeWeights.task_fulfillment,
+                  },
+                  {
+                    key: 'content_development' as const,
+                    title: '2. Inhalt & Entwicklung (Content Development)',
+                    sub: 'คุณภาพของเนื้อหา, ความสมเหตุสมผล, ตัวอย่างประกอบ',
+                    max: activeWeights.content_development,
+                  },
+                  {
+                    key: 'vocabulary' as const,
+                    title: '3. Wortschatz (Vocabulary)',
+                    sub: 'Range, Accuracy, Collocations, Context, Paraphrasing',
+                    max: activeWeights.vocabulary,
+                  },
+                  {
+                    key: 'grammar' as const,
+                    title: '4. Grammatik (Grammar)',
+                    sub: 'Verb Conjugation, Word Order, Cases, Sentence Structure',
+                    max: activeWeights.grammar,
+                  },
+                  {
+                    key: 'cohesion' as const,
+                    title: '5. Kohärenz & Kohäsion (Cohesion)',
+                    sub: 'Organisation, Paragraphs, Connectors, Flow',
+                    max: activeWeights.cohesion,
+                  },
+                  {
+                    key: 'register' as const,
+                    title: '6. Register & Stil (Register & Style)',
+                    sub: 'Formality, ความเหมาะสมกับผู้อ่าน',
+                    max: activeWeights.register,
+                  },
+                  {
+                    key: 'mechanics' as const,
+                    title: '7. Rechtschreibung (Mechanics)',
+                    sub: 'Groß-/Kleinschreibung, Kommasetzung, Zeichen',
+                    max: activeWeights.mechanics,
+                  },
+                ].map((row) => {
+                  const found = assessment.category_scores.find((c) => c.category === row.key);
+                  return (
+                    <tr key={row.key}>
+                      <td className="py-3.5 px-4 font-semibold text-slate-900">{row.title}</td>
+                      <td className="py-3.5 px-4 text-center font-bold text-slate-700">
+                        {found?.max_score ?? row.max}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">{row.sub}</td>
+                      <td className="py-3.5 px-4 text-center font-extrabold text-blue-600">
+                        {found?.score ?? 0}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot className="bg-slate-50 font-bold border-t border-slate-200">
                 <tr>
                   <td className="py-3.5 px-4 text-slate-900">รวมทั้งสิ้น (Total)</td>
-                  <td className="py-3.5 px-4 text-center text-slate-900">100 คะแนน</td>
-                  <td className="py-3.5 px-4 text-slate-500">เกรด A: 90-100 • B: 80-89 • C: 70-79 • D: 60-69 • E: 50-59 • F: 0-49</td>
+                  <td className="py-3.5 px-4 text-center text-slate-900">{maxTotalScore} คะแนน</td>
+                  <td className="py-3.5 px-4 text-slate-500">
+                    {maxTotalScore === 25
+                      ? 'เกรด A: 23–25 • B: 20–22 • C: 18–19 • D: 15–17 • E: 13–14 • F: 0–12'
+                      : 'เกรด A: 90–100 • B: 80–89 • C: 70–79 • D: 60–69 • E: 50–59 • F: 0–49'}
+                  </td>
                   <td className="py-3.5 px-4 text-center text-lg text-blue-600 font-black">
                     {assessment.total_score}
                   </td>

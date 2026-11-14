@@ -896,5 +896,318 @@ export const GRAMMAR_LESSONS: GrammarLesson[] = [
         explanation_th: '„befinde sich“ เป็นรูป Konjunktiv I เอกพจน์บุรุษที่ 3 ที่ถูกต้องสำหรับการรายงานข้อคิดเห็นอย่างเป็นกลาง'
       }
     ]
+  },
+  {
+    id: 'lesson-konnektoren-satzbau-praxis',
+    title: 'คำเชื่อม 3 ตระกูลที่ใช้จริงในงานเขียน (Position 0, Inversion, Nebensatz)',
+    german_title: 'Konnektoren im Satzbau: Position 0, Position 1 (Inversion) & Verbletzt',
+    topic: 'Konnektoren-Praxis',
+    cefr_level: 'A2',
+    explanation_th:
+      'จุดที่ผู้เรียนทำคะแนนหล่นมากที่สุดในการเขียน A2–B1 คือการวางตำแหน่งคำกริยาหลังคำเชื่อมผิดกฎ หากแยกออกเป็น 3 ตระกูลได้ชัดเจน คุณจะเขียนเชื่อมเหตุผล ข้อขัดแย้ง และการเพิ่มเติมได้อย่างเป็นธรรมชาติและไม่โดนหักคะแนนเรื่องโครงสร้างประโยค',
+    rules: [
+      'ตระกูลที่ 1 — Position 0 (ADUSO: aber, denn, und, sondern, oder): ไม่นับเป็นตำแหน่งที่ 1 ดังนั้นวาง ประธาน + กริยา ตามปกติ เช่น „Ich komme später, denn der Zug hat Verspätung.“',
+      'ตระกูลที่ 2 — Position 1 / Inversion (Konjunktionaladverbien: deshalb, deswegen, trotzdem, außerdem, danach, dann): คำเชื่อมยึดตำแหน่งที่ 1 ของประโยค กริยาแท้ (Verb) ต้องตามมาติด ๆ เป็นตำแหน่งที่ 2 ทันทีแล้วค่อยตามด้วยประธาน เช่น „Es regnet, trotzdem gehen wir spazieren.“',
+      'ตระกูลที่ 3 — Nebensatz / Verbletzt (Subjunktionen: weil, da, dass, wenn, obwohl, bevor): มีจุลภาคคั่นเสมอ และส่งกริยาแท้ที่ผันแล้วไปไว้ท้ายสุดของประโยค เช่น „Ich lerne Deutsch, weil ich in Berlin arbeiten möchte.“',
+      'ข้อควรจำ: ห้ามใช้ „weil“ เหมือน „denn“ (กริยาห้ามอยู่ตำแหน่งที่ 2 ในประโยค weil) และห้ามวางประธานแทรกหน้ากริยาหลังคำเชื่อมตระกูล Inversion เด็ดขาด'
+    ],
+    correct_examples: [
+      {
+        german: 'Ich habe leider keine Zeit, deshalb kann ich nicht zur Party kommen.',
+        thai: 'น่าเสียดายที่ฉันไม่มีเวลา ดังนั้นฉันจึงไม่สามารถไปงานปาร์ตี้ได้',
+        note: '„deshalb“ อยู่ตำแหน่งที่ 1 -> กริยา „kann“ ตามมาติด ๆ เป็นตำแหน่งที่ 2 (Inversion)'
+      },
+      {
+        german: 'Wir bleiben zu Hause, denn es ist sehr kalt, obwohl die Sonne scheint.',
+        thai: 'พวกเราอยู่บ้าน เพราะอากาศหนาวมาก แม้ว่าพระอาทิตย์จะส่องแสงก็ตาม',
+        note: '„denn“ (Position 0: es ist) คู่กับ „obwohl“ (Nebensatz: die Sonne scheint ท้ายประโยค)'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Es regnet stark, trotzdem ich gehe zu Fuß zur Arbeit.',
+        thai: 'ฝนตกหนัก แต่ฉันก็เดินไปทำงาน (วางตำแหน่งคำผิดหลัง trotzdem)',
+        correction: 'Es regnet stark, trotzdem gehe ich zu Fuß zur Arbeit.',
+        why_wrong_th: '„trotzdem“ เป็นคำกริยาวิเศษณ์เชื่อมประโยค (ตำแหน่งที่ 1) กริยา „gehe“ ต้องมาก่อนประธาน „ich“ เสมอ'
+      },
+      {
+        german: 'Ich lerne jeden Tag, weil ich möchte die Prüfung bestehen.',
+        thai: 'ฉันเรียนทุกวัน เพราะฉันอยากสอบผ่าน (เรียงคำผิดในอนุประโยค weil)',
+        correction: 'Ich lerne jeden Tag, weil ich die Prüfung bestehen möchte.',
+        why_wrong_th: 'หลัง „weil“ เป็น Nebensatz ต้องส่งกริยาที่ผันแล้ว („möchte“) ไปไว้ท้ายสุดของประโยค'
+      }
+    ],
+    quiz: [
+      {
+        question: 'ข้อใดเรียงตำแหน่งกริยาและประธานหลังคำเชื่อม „außerdem“ ได้ถูกต้อง?',
+        options: [
+          'Das Hotel liegt zentral, außerdem sind die Zimmer sehr sauber.',
+          'Das Hotel liegt zentral, außerdem die Zimmer sind sehr sauber.',
+          'Das Hotel liegt zentral, außerdem die Zimmer sehr sauber sind.',
+          'Das Hotel liegt zentral, weil außerdem die Zimmer sehr sauber.'
+        ],
+        correctIndex: 0,
+        explanation_th: '„außerdem“ จัดอยู่ในกลุ่ม Inversion (ตำแหน่งที่ 1) กริยาแท้ „sind“ จึงต้องตามมาเป็นตำแหน่งที่ 2 ก่อนประธาน „die Zimmer“'
+      },
+      {
+        question: 'ประโยคใดใช้โครงสร้าง „denn“ (Position 0) ได้ถูกต้องสมบูรณ์?',
+        options: [
+          'Ich nehme ein Taxi, denn ich habe einen wichtigen Termin.',
+          'Ich nehme ein Taxi, denn habe ich einen wichtigen Termin.',
+          'Ich nehme ein Taxi, denn ich einen wichtigen Termin habe.',
+          'Ich nehme ein Taxi, denn dass ich einen wichtigen Termin habe.'
+        ],
+        correctIndex: 0,
+        explanation_th: '„denn“ อยู่ตำแหน่งที่ 0 จึงเรียงแบบประโยคหลักปกติคือ ประธาน (ich) + กริยา (habe) + กรรม'
+      }
+    ]
+  },
+  {
+    id: 'lesson-tekamolo-satzbau',
+    title: 'การจัดลำดับคำในประโยคเพื่อความลื่นไหล (TeKaMoLo & Vorfeld-Wechsel)',
+    german_title: 'Wortstellung in der Praxis: TeKaMoLo, Dativ vor Akkusativ & Satzanfänge',
+    topic: 'Satzbau & TeKaMoLo',
+    cefr_level: 'B1',
+    explanation_th:
+      'งานเขียนที่ได้คะแนน B1–B2 สูงไม่ได้ขึ้นอยู่กับไวยากรณ์ที่ถูกต้องเท่านั้น แต่ต้องอ่านลื่นไหล ไม่ขึ้นต้นทุกประโยคด้วย „Ich...“ ซ้ำ ๆ บทเรียนนี้สอนกฎ TeKaMoLo ในการจัดเรียงส่วนขยาย การสลับส่วนเปิดประโยค (Vorfeld) และลำดับกรรมสองตัวในการเขียนจริง',
+    rules: [
+      'กฎ TeKaMoLo (ลำดับส่วนขยายกลางประโยค): Temporal (เมื่อไร) -> Kausal (เพราะเหตุใด) -> Modal (อย่างไร) -> Lokal (ที่ไหน) เช่น „Ich fahre morgen (Te) wegen des Termins (Ka) mit dem Zug (Mo) nach München (Lo).“',
+      'การเปิดประโยคด้วย Vorfeld (เพื่อลดการขึ้นต้นด้วย Ich/Man ซ้ำซาก): นำเวลา เหตุผล หรือสถานที่ขึ้นต้นประโยค แล้วตามด้วยกริยาแท้ + ประธาน เช่น „Am Samstagabend besuche ich...“ หรือ „Im Gegensatz dazu bietet...“',
+      'ลำดับกรรม Dativ และ Akkusativ: หากเป็นคำนามทั้งคู่ Dativ มาก่อน Akkusativ („Ich schicke dem Kunden die Rechnung.“) แต่ถ้า Akkusativ เป็นสรรพนาม (es/sie/ihn) สรรพนามมาก่อน („Ich schicke sie dem Kunden.“)',
+      'วลีระบุสถานที่เป้าหมายหรือทิศทางมักปิดท้ายก่อน Infinitiv/Partizip II เพื่อสร้าง Satzklammer ที่สมดุล'
+    ],
+    correct_examples: [
+      {
+        german: 'Aufgrund des starken Regens sind wir gestern abends lieber mit dem Bus ins Kino gefahren.',
+        thai: 'เนื่องจากฝนตกหนัก เมื่อเย็นวานพวกเราจึงเลือกนั่งรถบัสไปโรงภาพยนตร์แทน',
+        note: 'เปิดประโยคด้วย Kausal ใน Vorfeld ตามด้วย Verb „sind“, Temporal (gestern abends), Modal (mit dem Bus), Lokal (ins Kino)'
+      },
+      {
+        german: 'Ich empfehle Ihnen dieses Restaurant, weil man dort hervorragend essen kann.',
+        thai: 'กระผม/ดิฉันขอแนะนำร้านอาหารนี้ให้คุณ เพราะที่นั่นสามารถทานอาหารรสเลิศได้',
+        note: '„Ihnen“ (Dativ-Pronomen) มาก่อน „dieses Restaurant“ (Akkusativ-Nomen)'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Ich fahre nach Berlin morgen mit meinem Freund wegen der Konferenz.',
+        thai: 'ฉันจะไปเบอร์ลินพรุ่งนี้กับเพื่อนเพราะงานประชุม (เรียงส่วนขยายสลับ TeKaMoLo)',
+        correction: 'Morgen fahre ich wegen der Konferenz mit meinem Freund nach Berlin.',
+        why_wrong_th: 'เมื่อวาง „nach Berlin“ (Lokal) ไว้หน้า „morgen“ (Temporal) ประโยคจะฟังดูแข็ง ควรเรียง Te -> Ka -> Mo -> Lo หรือย้าย „Morgen“ ไปเปิดประโยค'
+      }
+    ],
+    quiz: [
+      {
+        question: 'ข้อใดเรียงส่วนขยายกลางประโยคตามหลัก TeKaMoLo ได้เป็นธรรมชาติที่สุด?',
+        options: [
+          'Sie reist nächste Woche aus beruflichen Gründen mit dem Flugzeug nach Wien.',
+          'Sie reist nach Wien mit dem Flugzeug nächste Woche aus beruflichen Gründen.',
+          'Sie reist aus beruflichen Gründen nach Wien nächste Woche mit dem Flugzeug.',
+          'Sie reist mit dem Flugzeug aus beruflichen Gründen nach Wien nächste Woche.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'เรียงครบตามลำดับ: Temporal (nächste Woche) -> Kausal (aus beruflichen Gründen) -> Modal (mit dem Flugzeug) -> Lokal (nach Wien)'
+      },
+      {
+        question: 'ถ้าต้องการเปลี่ยน „Ich gebe dem Chef den Bericht.“ โดยแทน „den Bericht“ ด้วยสรรพนาม ข้อใดถูกต้อง?',
+        options: [
+          'Ich gebe ihn dem Chef.',
+          'Ich gebe dem Chef ihn.',
+          'Ich ihn gebe dem Chef.',
+          'Dem Chef gebe ihn ich.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'เมื่อกรรมตรง (Akkusativ) เป็นสรรพนาม (ihn) จะต้องย้ายมาวางหน้ากรรมรองที่เป็นคำนาม (dem Chef) เสมอ'
+      }
+    ]
+  },
+  {
+    id: 'lesson-verben-praepositionen',
+    title: 'กริยากับบุพบทที่ต้องรู้สำหรับการเขียนจดหมายและเรียงความ (Verben mit Präpositionen)',
+    german_title: 'Verben mit festen Präpositionen & Pronominaladverbien (darauf, damit)',
+    topic: 'Verben mit Präpositionen',
+    cefr_level: 'B2',
+    explanation_th:
+      'ในการเขียน B1–B2 กริยาสำคัญหลายตัวต้องจับคู่กับบุพบทและกรณีนาม (Kasus) เฉพาะเจาะจง เช่น „teilnehmen an + Dativ“ หรือ „sich beschweren über + Akkusativ“ รวมถึงการใช้คำแทนบุพบท (Pronominaladverbien: darauf, darüber, damit) เพื่อเชื่อมประโยคให้กระชับระดับมืออาชีพ',
+    rules: [
+      'คู่กริยาที่พบบ่อยในจดหมาย/อีเมล: warten auf + Akk (รอคอย), sich freuen auf + Akk (ตั้งตารออนาคต), danken für + Akk (ขอบคุณสำหรับ), bitten um + Akk (ขอความกรุณาเรื่อง...), teilnehmen an + Dat (เข้าร่วม), sich beschweren über + Akk (ร้องเรียนเรื่อง)',
+      'คู่กริยาที่พบบ่อยในเรียงความ B2: beitragen zu + Dat (มีส่วนช่วยให้), abhängen von + Dat (ขึ้นอยู่กับ), führen zu + Dat (นำไปสู่), sich interessieren für + Akk (สนใจ), verzichten auf + Akk (ละเว้น/งดใช้)',
+      'การใช้ da(r)- + Präposition ก่อนประโยค dass หรือ Infinitiv: ใช้เมื่ออ้างถึงแนวคิดหรือเหตุการณ์ (สิ่งของ/เรื่องราว) เช่น „Ich freue mich darauf, Sie bald wiederzusehen.“ หรือ „Es trägt dazu bei, dass...“',
+      'คำถาม/คำเชื่อมจาก Pronominaladverb: หากอ้างถึงสิ่งไม่มีชีวิต ใช้ wo(r) + Präposition เช่น „worüber“, „worauf“ แทน „über was“ (ใช้ได้เฉพาะกับสิ่งไม่มีชีวิต ถ้าเป็นคนใช้ Präposition + wen/wem)'
+    ],
+    correct_examples: [
+      {
+        german: 'Hiermit möchte ich mich über die unzureichende Reinigung meines Hotelzimmers beschweren.',
+        thai: 'ด้วยจดหมายฉบับนี้ กระผม/ดิฉันขอร้องเรียนเรื่องการทำความสะอาดห้องพักโรงแรมที่ไม่ได้มาตรฐาน',
+        note: '„sich beschweren über + Akkusativ“ เป็นสำนวนหลักสำหรับเขียนจดหมายร้องเรียน B2'
+      },
+      {
+        german: 'Ein gut ausgebauter Nahverkehr trägt entscheidend dazu bei, die Umweltbelastung zu senken.',
+        thai: 'ระบบขนส่งมวลชนที่พัฒนาอย่างดีมีส่วนสำคัญอย่างยิ่งในการช่วยลดมลพิษทางสิ่งแวดล้อม',
+        note: 'ใช้ „beitragen zu“ คู่กับ „dazu“ เพื่อส่งต่อเข้า Infinitivsatz („zu senken“)'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Ich danke Ihnen über Ihre schnelle Hilfe und warte für Ihre Antwort.',
+        thai: 'ขอขอบคุณสำหรับความช่วยเหลือที่รวดเร็วและรอคอยคำตอบของคุณ (เลือกบุพบทผิดคู่กริยา)',
+        correction: 'Ich danke Ihnen für Ihre schnelle Hilfe und warte auf Ihre Antwort.',
+        why_wrong_th: 'ต้องใช้ „danken für + Akkusativ“ (ไม่ใช่ über) และ „warten auf + Akkusativ“ (ไม่ใช่ für)'
+      },
+      {
+        german: 'Wir achten auf, dass die Qualität stimmt.',
+        thai: 'พวกเราใส่ใจว่าคุณภาพต้องได้มาตรฐาน (ขาดตัวเชื่อม da- หน้าบุพบท)',
+        correction: 'Wir achten darauf, dass die Qualität stimmt.',
+        why_wrong_th: 'เมื่อกริยาที่มีบุพบท (achten auf) ตามด้วยอนุประโยค „dass“ ต้องเติม „da(r)-“ เป็น „darauf“ ข้างหน้าเสมอ'
+      }
+    ],
+    quiz: [
+      {
+        question: 'ข้อใดใช้ Pronominaladverb เชื่อมเข้าอนุประโยค „dass“ ได้ถูกต้อง?',
+        options: [
+          'Der Erfolg des Projekts hängt davon ab, wie gut das Team kommuniziert.',
+          'Der Erfolg des Projekts hängt von ab, wie gut das Team kommuniziert.',
+          'Der Erfolg des Projekts hängt über ab, wie gut das Team kommuniziert.',
+          'Der Erfolg des Projekts hängt damit ab, wie gut das Team kommuniziert.'
+        ],
+        correctIndex: 0,
+        explanation_th: 'กริยาคือ „abhängen von“ เมื่อเชื่อมประโยคจึงประกอบเป็น „da + von = davon“'
+      },
+      {
+        question: 'ประโยคใดใช้คู่กริยากับบุพบทและกรณีนาม (Kasus) ได้ถูกต้อง 100%?',
+        options: [
+          'Immer mehr junge Menschen verzichten bewusst auf ein eigenes Auto.',
+          'Immer mehr junge Menschen verzichten bewusst über ein eigenes Auto.',
+          'Immer mehr junge Menschen verzichten bewusst an einem eigenen Auto.',
+          'Immer mehr junge Menschen verzichten bewusst für ein eigenes Auto.'
+        ],
+        correctIndex: 0,
+        explanation_th: '„verzichten auf + Akkusativ“ (ละเว้น/เลือกไม่ใช้...) เป็นโครงสร้างตายตัวที่พบบ่อยในข้อสอบ B1–B2'
+      }
+    ]
+  },
+  {
+    id: 'lesson-konnektoren-kausal-konzessiv-b2',
+    title: 'คำเชื่อมเหตุผล ข้อโต้แย้ง เงื่อนไข และบุพบท Genitiv ระดับ B2',
+    german_title: 'Differenzierte Konnektoren & Genitivpräpositionen (sodass, indem, aufgrund, trotz)',
+    topic: 'Konnektoren & Genitiv',
+    cefr_level: 'B2',
+    explanation_th:
+      'เพื่อยกระดับคะแนน Wortschatz และ Kohärenz จากระดับ B1 ไปสู่ B2 อย่างชัดเจน ผู้เขียนต้องก้าวข้ามคำว่า „weil/aber/deshalb“ ไปใช้คำเชื่อมที่บอกความสัมพันธ์เชิงเหตุผล วิธีแก้ปัญหา ข้อแม้ และบุพบท Genitiv ที่กระชับเป็นทางการ',
+    rules: [
+      'ผลลัพธ์ (Konsekutiv): „sodass“ (ส่งผลให้... — Nebensatz กริยาอยู่ท้าย) หรือ Adverb „folglich / infolgedessen / somit“ (Inversion กริยาตามทันที) เช่น „Die Nachfrage stieg stark, sodass die Preise erhöht wurden.“',
+      'วิธีการแก้ปัญหา (Modal / Instrumental): „indem“ (โดยการที่... — Nebensatz กริยาอยู่ท้าย) ใช้เวลาเสนอทางออกในเรียงความ เช่น „Man schützt das Klima, indem man Energie spart.“',
+      'เงื่อนไขและสัดส่วน: „falls / sofern“ (ในกรณีที่/ตราบใดที่), „statt ... zu“ (แทนที่จะ...), และ „je + ขั้นกว่า ..., desto + ขั้นกว่า“ (ยิ่ง... ก็ยิ่ง... โดยฝั่ง desto กริยาตามหลังคำคุณศัพท์ขั้นกว่า)',
+      'บุพบท Genitiv แทนประโยคยาว: „aufgrund + Genitiv“ (เนื่องจาก), „wegen + Genitiv“ (เพราะ), „trotz + Genitiv“ (แม้จะมี...), „während + Genitiv“ (ระหว่าง...) เช่น „trotz des schlechten Wetters“ หรือ „aufgrund der hohen Nachfrage“'
+    ],
+    correct_examples: [
+      {
+        german: 'Je besser die öffentlichen Verkehrsmittel ausgebaut sind, desto mehr Pendler lassen ihr Auto stehen.',
+        thai: 'ยิ่งระบบขนส่งสาธารณะได้รับการพัฒนาดีเพียงใด ผู้เดินทางก็ยิ่งยอมจอดรถส่วนตัวทิ้งไว้มากขึ้นเท่านั้น',
+        note: 'ประโยคหน้า (je) กริยาอยู่ท้าย, ประโยคหลัง (desto) ตามด้วย „mehr Pendler“ หรือคำนาม + กริยาตามหลัก Vergleichssatz'
+      },
+      {
+        german: 'Aufgrund der steigenden Lebenshaltungskosten suchen viele Studierende nach günstigen Nebenjobs.',
+        thai: 'เนื่องจากค่าครองชีพที่สูงขึ้น นักศึกษาจำนวนมากจึงมองหางานพิเศษที่มีรายได้เสริม',
+        note: 'ใช้ „aufgrund + Genitiv“ ยุบประโยคเหตุผลให้กระชับและได้น้ำหนักแบบ B2'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Je mehr man liest, desto der Wortschatz wird größer.',
+        thai: 'ยิ่งอ่านมากเท่าไร คลังคำศัพท์ก็ยิ่งมากขึ้นเท่านั้น (เรียงคำผิดในส่วน desto)',
+        correction: 'Je mehr man liest, desto größer wird der Wortschatz.',
+        why_wrong_th: 'หลัง „desto“ ต้องตามด้วยคำคุณศัพท์ขั้นกว่า („größer“) แล้วตามด้วยกริยาแท้ („wird“) ทันที ก่อนประธาน „der Wortschatz“'
+      },
+      {
+        german: 'Trotz dem schlechten Wetter findet das Fest draußen statt.',
+        thai: 'แม้ว่าอากาศจะไม่ดี งานเทศกาลก็ยังจัดกลางแจ้ง (ใช้ Dativ แทน Genitiv ในภาษาเขียนทางการ)',
+        correction: 'Trotz des schlechten Wetters findet das Fest draußen statt.',
+        why_wrong_th: 'ในงานเขียนระดับ B2–C1 ควรใช้ „trotz + Genitiv“ (des schlechten Wetters) แทนรูปภาษาพูด'
+      }
+    ],
+    quiz: [
+      {
+        question: 'ข้อใดใช้คำเชื่อม „indem“ เพื่อบอกวิธีแก้ปัญหาได้ถูกต้องทั้งความหมายและไวยากรณ์?',
+        options: [
+          'Kommunen können Staus reduzieren, indem sie den Nahverkehr kostenlos anbieten.',
+          'Kommunen können Staus reduzieren, indem sie bieten den Nahverkehr kostenlos an.',
+          'Indem der hohe Verkehr können Kommunen Staus reduzieren.',
+          'Kommunen können Staus reduzieren, sodass sie den Nahverkehr anbieten.'
+        ],
+        correctIndex: 0,
+        explanation_th: '„indem“ เป็น Subjunktion (Nebensatz) ต้องส่งกริยาแท้ „anbieten“ ไปไว้ท้ายสุดของประโยค'
+      },
+      {
+        question: 'ข้อใดใช้บุพบท Genitiv ในงานเขียนระดับ B2 ได้ถูกต้อง?',
+        options: [
+          'Wegen eines technischen Fehlers musste der Termin verschoben werden.',
+          'Wegen ein technischer Fehler musste der Termin verschoben werden.',
+          'Aufgrund die hohe Kosten bleibt das Projekt pausiert.',
+          'Trotz der starker Regen kamen viele Gäste.'
+        ],
+        correctIndex: 0,
+        explanation_th: '„ein technischer Fehler“ (เพศชาย) เมื่ออยู่ในรูป Genitiv จะเปลี่ยนเป็น „eines technischen Fehlers“'
+      }
+    ]
+  },
+  {
+    id: 'lesson-c1-kohaesion-argumentation',
+    title: 'ศิลปะการเชื่อมย่อหน้าและคำอ้างอิงระดับ C1 (Textverknüpfung & Verweiswörter)',
+    german_title: 'Kohäsion auf C1-Niveau: Verweiswörter, Übergänge & differenzierte Erörterung',
+    topic: 'Textverknüpfung C1',
+    cefr_level: 'C1',
+    explanation_th:
+      'ความแตกต่างระหว่างงานเขียน B2 กับ C1 อยู่ที่ „ความต่อเนื่องระดับเนื้อความ“ (Textkohäsion): การเชื่อมย่อหน้าด้วยคำอ้างอิงย้อนหลัง (Verweiswörter) แทนการเขียนทวนประโยคซ้ำ การลำดับเหตุผลแบบไต่ระดับความสำคัญ และการโต้แย้งอย่างมีชั้นเชิง (Konzession + Gegenargument)',
+    rules: [
+      'คำอ้างอิงย้อนหลัง (Verweiswörter): „diesbezüglich“ (ในเรื่องดังกล่าวนี้), „demzufolge“ (ดังผลสืบเนื่องจากข้อเท็จจริงก่อนหน้า), „demgegenüber“ (ในทางตรงกันข้ามกับข้อก่อนหน้า), „ungeachtet dessen“ (แม้จะเป็นเช่นนั้นก็ตาม)',
+      'การยอมรับข้อเท็จจริงก่อนโต้แย้ง (Einräumung): ใช้ „zwar ..., doch / jedoch ...“, „obgleich / wenngleich“ (ถึงแม้ว่า), หรือ „nicht zuletzt deshalb, weil...“ (ส่วนหนึ่งก็เนื่องมาจาก...)',
+      'การเชื่อมระหว่างย่อหน้าอย่างเป็นธรรมชาติ: เปลี่ยนจาก „Zweitens...“ เป็น „Ein weiterer zentraler Aspekt betrifft...“, „Dem lässt sich jedoch entgegenhalten, dass...“, „Abwägend lässt sich festhalten, dass...“',
+      'การใช้สรรพนามชี้เฉพาะเพื่อลดคำซ้ำ: „Dieser Umstand führt dazu, dass...“, „Eine solche Entwicklung birgt die Gefahr...“'
+    ],
+    correct_examples: [
+      {
+        german: 'Die Digitalisierung eröffnet zwar enorme Effizienzpotenziale; demgegenüber stehen jedoch erhebliche Datenschutzbedenken.',
+        thai: 'แม้ว่าการใช้เทคโนโลยีดิจิทัลจะเปิดโอกาสในการเพิ่มประสิทธิภาพอย่างมหาศาล ทว่าในทางตรงกันข้ามก็มีความกังวลเรื่องการคุ้มครองข้อมูลอย่างมากเช่นกัน',
+        note: 'ผสาน „zwar“ กับ „demgegenüber ... jedoch“ เชื่อมจุดเด่นและจุดด้อยในประโยคเดียวอย่างมีระดับ'
+      },
+      {
+        german: 'Die Studienlage ist bislang uneinheitlich. Ungeachtet dessen plädieren Fachleute für präventive Maßnahmen.',
+        thai: 'ผลการศึกษาจนถึงปัจจุบันยังไม่เป็นเอกฉันท์ แม้จะเป็นเช่นนั้น ผู้เชี่ยวชาญก็ยังคงเรียกร้องให้มีมาตรการป้องกันไว้ก่อน',
+        note: '„Ungeachtet dessen“ เชื่อมโยงข้อเท็จจริงจากประโยคแรกไปสู่ข้อสรุปอย่างกระชับและเป็นวิชาการ'
+      }
+    ],
+    incorrect_examples: [
+      {
+        german: 'Viele Leute sagen, dass Homeoffice gut ist. Aber viele andere Leute sagen auch, dass Homeoffice nicht gut ist.',
+        thai: 'คนจำนวนมากบอกว่าการทำงานที่บ้านดี แต่คนอีกจำนวนมากก็บอกว่าไม่ดี (ซ้ำคำและขาด Verweiswörter)',
+        correction: 'Während Befürworter die höhere Zeitsouveränität des Homeoffice hervorheben, verweisen Kritiker demgegenüber auf eine drohende soziale Isolation.',
+        why_wrong_th: 'ระดับ C1 หลีกเลี่ยงการใช้ „Viele Leute sagen / gut / nicht gut“ ซ้ำ ๆ และใช้โครงสร้างเปรียบเทียบ „während ..., demgegenüber ...“'
+      }
+    ],
+    quiz: [
+      {
+        question: 'คำเชื่อมใดเหมาะที่สุดในการเชื่อมย่อหน้าเพื่อนำเสนอ "มุมมองที่ตรงกันข้าม" ในบทความระดับ C1?',
+        options: [
+          'Demgegenüber ist kritisch anzumerken, dass diese Maßnahme erhebliche Kosten verursacht.',
+          'Außerdem möchte ich noch schnell etwas anderes sagen über Kosten.',
+          'Deshalb es gibt auch eine ganz andere Sache mit den Kosten.',
+          'Und aber die Kosten sind auch noch ein Problem hier.'
+        ],
+        correctIndex: 0,
+        explanation_th: '„Demgegenüber ist kritisch anzumerken, dass...“ สร้างรอยต่อเชิงโต้แย้งที่เป็นทางการและชัดเจนตามมาตรฐาน C1'
+      },
+      {
+        question: 'ข้อใดใช้คำเชื่อมเชิงเงื่อนไขระดับ C1 „sofern“ ได้ถูกต้องตามโครงสร้างประโยค?',
+        options: [
+          'Ein Tempolimit wirkt sich positiv aus, sofern es konsequent kontrolliert wird.',
+          'Ein Tempolimit wirkt sich positiv aus, sofern wird es konsequent kontrolliert.',
+          'Sofern das Tempolimit wirkt sich positiv aus, kontrolliert man es.',
+          'Ein Tempolimit wirkt sich positiv aus, sofern kontrollieren konsequent.'
+        ],
+        correctIndex: 0,
+        explanation_th: '„sofern“ เป็น Subjunktion (Nebensatz) กริยาแท้ „wird“ จึงต้องอยู่ท้ายสุดของประโยค'
+      }
+    ]
   }
 ];

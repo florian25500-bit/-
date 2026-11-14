@@ -51,7 +51,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-sans">
-            ฝึกเขียนข้อสอบภาษาเยอรมันด้วยเกณฑ์วิชาการแท้จริง 100 คะแนนเต็ม ปรับความยากของโจทย์ตรงตามระดับที่สอบ (A1, A2, B1, B2 และ C1) พร้อมวิเคราะห์ข้อผิดพลาดและอธิบายหลักไวยากรณ์เป็นภาษาไทย
+            ฝึกเขียนข้อสอบภาษาเยอรมันด้วยเกณฑ์วิชาการแท้จริง (A1–A2 เต็ม 25 คะแนน • B1–C1 เต็ม 100 คะแนน) ปรับความยากของโจทย์ตรงตามระดับที่สอบ พร้อมวิเคราะห์ข้อผิดพลาดและอธิบายหลักไวยากรณ์เป็นภาษาไทย
           </p>
 
           <div className="flex flex-wrap items-center gap-3.5 pt-2">
@@ -69,15 +69,15 @@ export const LandingView: React.FC<LandingViewProps> = ({
               className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-xs sm:text-sm px-5 py-3.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
             >
               <Award className="w-4 h-4 text-amber-500" />
-              <span>ดูเกณฑ์ประเมิน 100 คะแนน</span>
+              <span>ดูเกณฑ์ประเมิน 25 / 100 คะแนน</span>
             </button>
           </div>
 
           {/* Academic Features Highlights */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-8 border-t border-slate-100 text-xs">
             <div>
-              <span className="block text-slate-900 font-bold text-sm">100 คะแนนเต็ม</span>
-              <span className="text-slate-500">7 หมวดการประเมินอิสระ</span>
+              <span className="block text-slate-900 font-bold text-sm">25 / 100 คะแนน</span>
+              <span className="text-slate-500">A1–A2 (25) • B1–C1 (100)</span>
             </div>
             <div>
               <span className="block text-slate-900 font-bold text-sm">Strict Academic</span>
@@ -139,7 +139,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               CEFR & Rubric
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              ให้คะแนน 7 หมวด 100 คะแนนเต็ม คำนวณเกรด A–F และประเมิน CEFR Profile รายทักษะ
+              ให้คะแนน 7 หมวดตามเกณฑ์ระดับสอบ (25 หรือ 100 คะแนน) คำนวณเกรด A–F และประเมิน CEFR Profile รายทักษะ
             </p>
           </div>
 
@@ -348,10 +348,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5">
             <h3 className="text-base sm:text-lg font-bold text-slate-900">
-              เกณฑ์การประเมิน 100 คะแนนเต็ม (Assessment Rubric)
+              เกณฑ์การประเมินตามระดับสอบ (A1–A2 เต็ม 25 คะแนน • B1–C1 เต็ม 100 คะแนน)
             </h3>
             <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-              Aufgabenbewältigung (20) • Inhalt & Entwicklung (15) • Wortschatz (20) • Grammatik (20) • Kohärenz & Kohäsion (15) • Register & Stil (5) • Rechtschreibung (5)
+              ระดับ A1–A2 (ผ่าน 15/25): Aufgabenbewältigung (6) • Inhalt (3) • Wortschatz (5) • Grammatik (5) • Kohäsion (3) • Register (1) • Rechtschreibung (2) — ระดับ B1–C1 (ผ่าน 60/100): 20 / 15 / 20 / 20 / 15 / 5 / 5
             </p>
           </div>
           <button

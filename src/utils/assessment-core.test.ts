@@ -13,7 +13,12 @@ import {
   MAX_IMAGE_BYTES,
   buildGoetheExamVerdict,
   getGoethePraedikat,
+  getAssessmentResponseSchema,
+  rescaleCategoryScoresForLevel,
+  VALID_LESSON_IDS,
 } from './assessment-core';
+import { INITIAL_VOCABULARY } from '../data/sampleVocabulary';
+import { GRAMMAR_LESSONS } from '../data/grammarLessons';
 import { WritingTask, CEFRProfile, CategoryScoreItem } from '../types';
 
 test('isPredominantlyGerman verifies German and rejects non-German text', () => {
@@ -173,9 +178,14 @@ test('normalizeLessonId maps topics and IDs to valid grammar lesson IDs includin
   assert.equal(normalizeLessonId(undefined, 'Zweiteilige Konnektoren'), 'lesson-konnektoren-b2');
   assert.equal(normalizeLessonId(undefined, 'Konjunktiv II Höflichkeit'), 'lesson-konjunktiv-2');
   assert.equal(normalizeLessonId(undefined, 'Nominalisierung C1'), 'lesson-nominalisierung');
+  assert.equal(normalizeLessonId(undefined, 'Position 0 ADUSO Inversion'), 'lesson-konnektoren-satzbau-praxis');
+  assert.equal(normalizeLessonId(undefined, 'TeKaMoLo Vorfeld Dativ vor Akkusativ'), 'lesson-tekamolo-satzbau');
+  assert.equal(normalizeLessonId(undefined, 'Verben mit Präpositionen darauf'), 'lesson-verben-praepositionen');
+  assert.equal(normalizeLessonId(undefined, 'sodass indem aufgrund Genitivpräpositionen'), 'lesson-konnektoren-kausal-konzessiv-b2');
+  assert.equal(normalizeLessonId(undefined, 'Textverknüpfung Verweiswörter demzufolge'), 'lesson-c1-kohaesion-argumentation');
 });
 
-test('calibrateEvidenceScores does not penalize a valid 35-word A1 submission or Free Writing submission as Unterlänge', () => {
+test('calibrateEvidenceScores uses 25-point scale for A1-A2 and 100-point scale for B1-C1/AUTO without false Unterlänge', () => {
   const a1Task: WritingTask = {
     id: 't-a1-test',
     task_id: 'EXAM-A1-001',
@@ -192,34 +202,51 @@ test('calibrateEvidenceScores does not penalize a valid 35-word A1 submission or
     task_version: '4.0',
   };
 
-  const freeTask: WritingTask = {
+  const freeTask100: WritingTask = {
     ...a1Task,
     id: 'free-writing',
     task_id: 'FREE-WRITING',
+    cefr_level: 'B2',
     category: 'Freier Text',
     min_words: 0,
     max_words: 0,
     requirements: [],
   };
 
-  const rawScores = {
-    task_fulfillment: { score: 19, feedback_th: 'ตอบครบทั้ง 3 ประเด็น' },
+  const rawScores25 = {
+    task_fulfillment: { score: 6, feedback_th: 'ตอบครบทั้ง 3 ประเด็น' },
+    content_development: { score: 3, feedback_th: 'ข้อมูลชัดเจนเหมาะสม' },
+    vocabulary: { score: 5, feedback_th: 'ใช้คำศัพท์พื้นฐานได้ถูกต้อง' },
+    grammar: { score: 5, feedback_th: 'ผันกริยาและตำแหน่ง V2 ถูกต้อง' },
+    cohesion: { score: 3, feedback_th: 'เชื่อมประโยคด้วย und / aber ได้ดี' },
+    register: { score: 1, feedback_th: 'ใช้ภาษาเป็นกันเองเหมาะสม' },
+    mechanics: { score: 2, feedback_th: 'สะกดถูกต้อง' },
+  };
+
+  const resultA1 = calibrateEvidenceScores(rawScores25, [], 35, a1Task);
+  assert.equal(resultA1.adjustments.length, 0);
+  assert.equal(resultA1.totalScore, 25);
+  assert.equal(resultA1.maxTotalScore, 25);
+  assert.equal(resultA1.grade, 'A');
+
+  const resultA1Short = calibrateEvidenceScores(rawScores25, [], 10, a1Task);
+  assert.ok(resultA1Short.adjustments.length > 0);
+  assert.ok(resultA1Short.totalScore < 20, 'Short A1 text (<50% min words) must be capped cleanly on 25-pt scale');
+
+  const rawScores100 = {
+    task_fulfillment: { score: 19, feedback_th: 'ตอบครบประเด็น' },
     content_development: { score: 13, feedback_th: 'ข้อมูลชัดเจนเหมาะสม' },
-    vocabulary: { score: 18, feedback_th: 'ใช้คำศัพท์พื้นฐานได้ถูกต้อง' },
-    grammar: { score: 18, feedback_th: 'ผันกริยาและตำแหน่ง V2 ถูกต้อง' },
-    cohesion: { score: 13, feedback_th: 'เชื่อมประโยคด้วย und / aber ได้ดี' },
-    register: { score: 5, feedback_th: 'ใช้ภาษาเป็นกันเองเหมาะสม' },
+    vocabulary: { score: 18, feedback_th: 'ใช้คำศัพท์ตรงบริบท' },
+    grammar: { score: 18, feedback_th: 'ไวยากรณ์แม่นยำ' },
+    cohesion: { score: 13, feedback_th: 'เชื่อมประโยคดี' },
+    register: { score: 5, feedback_th: 'ภาษาสุภาพเหมาะสม' },
     mechanics: { score: 5, feedback_th: 'สะกดถูกต้อง' },
   };
 
-  const resultA1 = calibrateEvidenceScores(rawScores, [], 35, a1Task);
-  assert.equal(resultA1.adjustments.length, 0);
-  assert.equal(resultA1.totalScore, 91);
-  assert.equal(resultA1.grade, 'A');
-
-  const resultFree = calibrateEvidenceScores(rawScores, [], 20, freeTask);
+  const resultFree = calibrateEvidenceScores(rawScores100, [], 20, freeTask100);
   assert.equal(resultFree.adjustments.length, 0);
   assert.equal(resultFree.totalScore, 91);
+  assert.equal(resultFree.maxTotalScore, 100);
 });
 
 test('validateAttachedImageInput accepts valid PNG/JPEG/WEBP payloads and rejects invalid or oversized inputs', () => {
@@ -295,6 +322,91 @@ test('getGoethePraedikat and buildGoetheExamVerdict evaluate pass/fail at 60/100
   assert.equal(failVerdict.passed, false);
   assert.equal(failVerdict.points_margin, -12);
   assert.equal(failVerdict.praedikat_de, 'nicht bestanden');
+});
+
+test('buildGoetheExamVerdict and getGoethePraedikat evaluate A1-A2 on 25-point scale (pass at 15/25)', () => {
+  assert.equal(getGoethePraedikat(25, 25).praedikat_de, 'sehr gut');
+  assert.equal(getGoethePraedikat(21, 25).praedikat_de, 'gut');
+  assert.equal(getGoethePraedikat(18, 25).praedikat_de, 'befriedigend');
+  assert.equal(getGoethePraedikat(15, 25).praedikat_de, 'ausreichend');
+  assert.equal(getGoethePraedikat(15, 25).passed, true);
+  assert.equal(getGoethePraedikat(14, 25).praedikat_de, 'nicht bestanden');
+  assert.equal(getGoethePraedikat(14, 25).passed, false);
+
+  const categoriesA2: CategoryScoreItem[] = [
+    { category: 'task_fulfillment', label_de: 'Aufgabenbewältigung', label_en: 'Task', score: 4, max_score: 6, feedback_th: 'ครบประเด็น' },
+    { category: 'content_development', label_de: 'Inhalt', label_en: 'Content', score: 2, max_score: 3, feedback_th: 'มีเหตุผล' },
+    { category: 'vocabulary', label_de: 'Wortschatz', label_en: 'Vocabulary', score: 3, max_score: 5, feedback_th: 'คำศัพท์ตรงบริบท' },
+    { category: 'grammar', label_de: 'Grammatik', label_en: 'Grammar', score: 3, max_score: 5, feedback_th: 'V2 ถูกต้อง' },
+    { category: 'cohesion', label_de: 'Kohärenz', label_en: 'Cohesion', score: 2, max_score: 3, feedback_th: 'เชื่อมประโยคดี' },
+    { category: 'register', label_de: 'Register', label_en: 'Register', score: 1, max_score: 1, feedback_th: 'สุภาพเหมาะสม' },
+    { category: 'mechanics', label_de: 'Rechtschreibung', label_en: 'Mechanics', score: 1, max_score: 2, feedback_th: 'สะกดถูก' },
+  ];
+
+  // 4 + 2 + 3 + 3 + 2 + 1 + 1 = 16 / 25
+  const passA2 = buildGoetheExamVerdict(16, categoriesA2, 'A2', 'exam', 25);
+  assert.equal(passA2.max_score, 25);
+  assert.equal(passA2.pass_threshold, 15);
+  assert.equal(passA2.passed, true);
+  assert.equal(passA2.points_margin, 1);
+  assert.equal(passA2.praedikat_de, 'ausreichend');
+  assert.equal(passA2.official_criteria.reduce((s, c) => s + c.score, 0), 16);
+  assert.equal(passA2.official_criteria.reduce((s, c) => s + c.max_score, 0), 25);
+
+  const failA1 = buildGoetheExamVerdict(14, categoriesA2, 'A1', 'exam', 25);
+  assert.equal(failA1.passed, false);
+  assert.equal(failA1.pass_threshold, 15);
+  assert.equal(failA1.points_margin, -1);
+  assert.equal(failA1.praedikat_de, 'nicht bestanden');
+});
+
+test('getAssessmentResponseSchema and rescaleCategoryScoresForLevel respect 25-pt vs 100-pt rubric scales', () => {
+  const schemaA1 = getAssessmentResponseSchema('A1') as any;
+  const schemaB2 = getAssessmentResponseSchema('B2') as any;
+  assert.match(schemaA1.properties.category_scores.properties.task_fulfillment.properties.score.description, /0-6/);
+  assert.match(schemaB2.properties.category_scores.properties.task_fulfillment.properties.score.description, /0-20/);
+
+  const scores100: CategoryScoreItem[] = [
+    { category: 'task_fulfillment', label_de: 'Aufgabenbewältigung', label_en: 'Task', score: 16, max_score: 20, feedback_th: 'ดี' },
+    { category: 'content_development', label_de: 'Inhalt', label_en: 'Content', score: 12, max_score: 15, feedback_th: 'ดี' },
+    { category: 'vocabulary', label_de: 'Wortschatz', label_en: 'Vocabulary', score: 16, max_score: 20, feedback_th: 'ดี' },
+    { category: 'grammar', label_de: 'Grammatik', label_en: 'Grammar', score: 16, max_score: 20, feedback_th: 'ดี' },
+    { category: 'cohesion', label_de: 'Kohärenz', label_en: 'Cohesion', score: 12, max_score: 15, feedback_th: 'ดี' },
+    { category: 'register', label_de: 'Register', label_en: 'Register', score: 4, max_score: 5, feedback_th: 'ดี' },
+    { category: 'mechanics', label_de: 'Rechtschreibung', label_en: 'Mechanics', score: 4, max_score: 5, feedback_th: 'ดี' },
+  ];
+  // Each category is at 80% -> 80% of 25 = 20 / 25 (B / gut)
+  const rescaled = rescaleCategoryScoresForLevel(scores100, 'A2');
+  assert.equal(rescaled.maxTotalScore, 25);
+  assert.equal(rescaled.totalScore, 20);
+  assert.equal(rescaled.grade, 'B');
+});
+
+test('INITIAL_VOCABULARY has expanded connector bank and unique IDs, and GRAMMAR_LESSONS syncs with VALID_LESSON_IDS', () => {
+  assert.ok(INITIAL_VOCABULARY.length >= 120, `Expected >= 120 vocabulary items, got ${INITIAL_VOCABULARY.length}`);
+  const vocabIds = new Set(INITIAL_VOCABULARY.map((v) => v.id));
+  assert.equal(vocabIds.size, INITIAL_VOCABULARY.length, 'Vocabulary IDs must be unique');
+
+  const connectors = INITIAL_VOCABULARY.filter((v) => v.part_of_speech === 'Connector');
+  assert.ok(connectors.length >= 50, `Expected >= 50 connectors, got ${connectors.length}`);
+
+  const functionTags = new Set(['Kausal', 'Konzessiv', 'Additiv', 'Konditional', 'Temporal', 'Gliederung']);
+  for (const conn of connectors) {
+    assert.ok(
+      (conn.tags ?? []).some((t) => functionTags.has(t)),
+      `Connector ${conn.id} (${conn.word}) must belong to at least one logical-function filter tag`
+    );
+  }
+
+  assert.equal(GRAMMAR_LESSONS.length, 21, 'Expected 21 grammar lessons including 5 practical writing lessons');
+  const lessonIds = new Set(GRAMMAR_LESSONS.map((l) => l.id));
+  assert.equal(lessonIds.size, GRAMMAR_LESSONS.length, 'Lesson IDs must be unique');
+  for (const lesson of GRAMMAR_LESSONS) {
+    assert.ok(
+      (VALID_LESSON_IDS as readonly string[]).includes(lesson.id),
+      `Lesson ID ${lesson.id} must be registered in VALID_LESSON_IDS`
+    );
+  }
 });
 
 

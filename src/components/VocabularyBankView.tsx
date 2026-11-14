@@ -30,6 +30,7 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('ALL');
   const [selectedPos, setSelectedPos] = useState<string>('ALL');
+  const [selectedConnectorFunc, setSelectedConnectorFunc] = useState<string>('ALL');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [flashcardMode, setFlashcardMode] = useState<boolean>(false);
@@ -52,6 +53,10 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
       (selectedPos === 'Modifier'
         ? item.part_of_speech === 'Adjective' || item.part_of_speech === 'Adverb'
         : item.part_of_speech === selectedPos);
+    const matchesConnectorFunc =
+      selectedPos !== 'Connector' ||
+      selectedConnectorFunc === 'ALL' ||
+      (item.tags || []).includes(selectedConnectorFunc);
     const q = searchTerm.toLowerCase();
     const matchesSearch =
       !q ||
@@ -59,7 +64,7 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
       item.meaning_th.toLowerCase().includes(q) ||
       item.example_sentence.toLowerCase().includes(q) ||
       (item.tags || []).some((t) => t.toLowerCase().includes(q));
-    return matchesLevel && matchesPos && matchesSearch;
+    return matchesLevel && matchesPos && matchesConnectorFunc && matchesSearch;
   });
 
   const handleCopyPhrase = async (id: string, text: string) => {
@@ -269,7 +274,7 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
             <span className="text-[11px] font-semibold text-slate-400 mr-1">ชนิดคำ/บทบาท:</span>
             {[
               { id: 'ALL', label: 'ทั้งหมด' },
-              { id: 'Connector', label: 'คำเชื่อมประโยค (Konnektoren)' },
+              { id: 'Connector', label: `คำเชื่อมประโยค (Konnektoren ${vocabulary.filter((v) => v.part_of_speech === 'Connector').length})` },
               { id: 'Verb', label: 'คำกริยา (Verben)' },
               { id: 'Noun', label: 'คำนาม (Nomen)' },
               { id: 'Modifier', label: 'คุณศัพท์/สำนวน (Adj./Adv.)' },
@@ -279,6 +284,9 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
                 type="button"
                 onClick={() => {
                   setSelectedPos(pos.id);
+                  if (pos.id !== 'Connector') {
+                    setSelectedConnectorFunc('ALL');
+                  }
                   setCardIndex(0);
                 }}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
@@ -296,6 +304,37 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
             แสดง {filtered.length} จาก {vocabulary.length} รายการ
           </span>
         </div>
+
+        {selectedPos === 'Connector' && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+            <span className="text-[11px] font-semibold text-blue-700 mr-1">หน้าที่คำเชื่อม:</span>
+            {[
+              { id: 'ALL', label: 'ทุกประเภท' },
+              { id: 'Kausal', label: 'เหตุผล/ผลลัพธ์ (Kausal)' },
+              { id: 'Konzessiv', label: 'ขัดแย้ง/โต้แย้ง (Konzessiv)' },
+              { id: 'Additiv', label: 'เพิ่มเติม (Additiv)' },
+              { id: 'Konditional', label: 'เงื่อนไข/จุดประสงค์ (Konditional)' },
+              { id: 'Temporal', label: 'เวลา (Temporal)' },
+              { id: 'Gliederung', label: 'ลำดับ/สรุป (Gliederung/Fazit)' },
+            ].map((fn) => (
+              <button
+                key={fn.id}
+                type="button"
+                onClick={() => {
+                  setSelectedConnectorFunc(fn.id);
+                  setCardIndex(0);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+                  selectedConnectorFunc === fn.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-blue-50/70 hover:bg-blue-100 text-blue-800 border border-blue-200/70'
+                }`}
+              >
+                {fn.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Vocabulary Cards Grid */}

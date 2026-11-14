@@ -51,7 +51,7 @@ import { VALID_LESSON_IDS } from './assessment-core';
 
 test('GRAMMAR_LESSONS and INITIAL_VOCABULARY provide complete writing-focused A1–C1 coverage', () => {
   const levels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1'];
-  assert.equal(GRAMMAR_LESSONS.length, 16);
+  assert.equal(GRAMMAR_LESSONS.length, 21);
 
   const lessonIds = new Set(GRAMMAR_LESSONS.map((l) => l.id));
   assert.equal(lessonIds.size, GRAMMAR_LESSONS.length, 'Lesson IDs must be unique');

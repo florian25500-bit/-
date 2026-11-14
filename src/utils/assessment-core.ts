@@ -43,6 +43,11 @@ export const VALID_LESSON_IDS = [
   'lesson-konjunktiv-2',
   'lesson-nominalisierung',
   'lesson-partizipialattribute-c1',
+  'lesson-konnektoren-satzbau-praxis',
+  'lesson-tekamolo-satzbau',
+  'lesson-verben-praepositionen',
+  'lesson-konnektoren-kausal-konzessiv-b2',
+  'lesson-c1-kohaesion-argumentation',
 ] as const;
 
 export const CEFR_SUBLEVEL_ENUM: ExtendedCEFR[] = ['A1', 'A2', 'A2+', 'B1', 'B1+', 'B2', 'B2+', 'C1', 'C1+'];
@@ -165,6 +170,21 @@ export function normalizeLessonId(lessonId?: string, topic?: string): string {
   }
   if (combined.includes('stellungnahme') || combined.includes('redemittel') || combined.includes('beschwerde') || combined.includes('argument') || combined.includes('aufbau') || combined.includes('gliederung')) {
     return 'lesson-stellungnahme-redemittel';
+  }
+  if (combined.includes('tekamolo') || combined.includes('vorfeld') || combined.includes('satzanfang') || combined.includes('dativ vor akkusativ')) {
+    return 'lesson-tekamolo-satzbau';
+  }
+  if (combined.includes('verben mit präposition') || combined.includes('pronominaladverb') || combined.includes('darauf') || combined.includes('beschweren über') || combined.includes('teilnehmen an')) {
+    return 'lesson-verben-praepositionen';
+  }
+  if (combined.includes('sodass') || combined.includes('indem') || combined.includes('aufgrund') || combined.includes('je...desto') || combined.includes('je ... desto') || combined.includes('genitivpräposition')) {
+    return 'lesson-konnektoren-kausal-konzessiv-b2';
+  }
+  if (combined.includes('textverknüpfung') || combined.includes('verweiswörter') || combined.includes('demzufolge') || combined.includes('ungeachtet dessen') || combined.includes('erörterung')) {
+    return 'lesson-c1-kohaesion-argumentation';
+  }
+  if (combined.includes('position 0') || combined.includes('konnektoren-praxis') || combined.includes('konnektoren-satzbau') || combined.includes('aduso')) {
+    return 'lesson-konnektoren-satzbau-praxis';
   }
   if (combined.includes('präsens') || combined.includes('praesens') || combined.includes('v2') || combined.includes('w-frage') || combined.includes('trennbar') || combined.includes('grundlagen') || combined.includes('a1')) {
     return 'lesson-praesens-satzbau';
