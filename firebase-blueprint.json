@@ -2,127 +2,60 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "User profile document with immutable publicId",
+      "description": "User profile document",
       "type": "object",
       "properties": {
         "uid": { "type": "string", "maxLength": 128 },
-        "publicId": { "type": "string", "maxLength": 16, "pattern": "^DS-[A-Z0-9]{8}$" },
         "email": { "type": "string", "maxLength": 256 },
         "displayName": { "type": "string", "maxLength": 100 },
         "photoURL": { "type": "string", "maxLength": 500 },
-        "createdAt": { "type": "string", "maxLength": 64 },
-        "lastLoginAt": { "type": "string", "maxLength": 64 }
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "lastLoginAt": { "type": "string", "maxLength": 50 }
       },
-      "required": ["uid", "publicId", "createdAt"]
-    },
-    "UserDirectoryEntry": {
-      "title": "UserDirectoryEntry",
-      "description": "Non-PII directory mapping immutable publicId to uid and displayName",
-      "type": "object",
-      "properties": {
-        "publicId": { "type": "string", "maxLength": 16, "pattern": "^DS-[A-Z0-9]{8}$" },
-        "uid": { "type": "string", "maxLength": 128 },
-        "displayName": { "type": "string", "maxLength": 100 },
-        "createdAt": { "type": "string", "maxLength": 64 }
-      },
-      "required": ["publicId", "uid", "displayName", "createdAt"]
-    },
-    "AdminMarker": {
-      "title": "AdminMarker",
-      "description": "Verified administrator marker document",
-      "type": "object",
-      "properties": {
-        "uid": { "type": "string", "maxLength": 128 },
-        "email": { "type": "string", "maxLength": 256 },
-        "verifiedAt": { "type": "string", "maxLength": 64 }
-      },
-      "required": ["uid", "email", "verifiedAt"]
-    },
-    "AdminGateConfig": {
-      "title": "AdminGateConfig",
-      "description": "Database-stored admin passcode configuration",
-      "type": "object",
-      "properties": {
-        "adminEmail": { "type": "string", "maxLength": 256 },
-        "passcode": { "type": "string", "minLength": 4, "maxLength": 128 },
-        "updatedAt": { "type": "string", "maxLength": 64 }
-      },
-      "required": ["adminEmail", "passcode", "updatedAt"]
-    },
-    "UserEntitlement": {
-      "title": "UserEntitlement",
-      "description": "Admin-granted feature access keyed by immutable publicId",
-      "type": "object",
-      "properties": {
-        "publicId": { "type": "string", "maxLength": 16, "pattern": "^DS-[A-Z0-9]{8}$" },
-        "english_writing_enabled": { "type": "boolean" },
-        "granted_by": { "type": "string", "maxLength": 256 },
-        "granted_at": { "type": "string", "maxLength": 64 },
-        "updated_at": { "type": "string", "maxLength": 64 },
-        "note": { "type": "string", "maxLength": 240 }
-      },
-      "required": ["publicId", "english_writing_enabled", "granted_by", "updated_at"]
+      "required": ["uid", "createdAt"]
     },
     "Submission": {
       "title": "Submission",
-      "description": "Writing assessment submission and evaluation record (German or English)",
+      "description": "German writing assessment submission and evaluation record",
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
         "userId": { "type": "string", "maxLength": 128 },
-        "language": { "type": "string", "enum": ["de", "en"] },
         "topic": { "type": "string", "maxLength": 300 },
-        "level": { "type": "string", "maxLength": 16 },
+        "level": { "type": "string", "maxLength": 10 },
         "targetWordCount": { "type": "number" },
         "actualWordCount": { "type": "number" },
         "overallScore": { "type": "number" },
-        "text": { "type": "string", "maxLength": 25000 },
+        "text": { "type": "string", "maxLength": 10000 },
         "feedback": { "type": "string", "maxLength": 5000 },
         "breakdown": { "type": "object" },
         "detailedErrors": { "type": "array" },
-        "improvedVersion": { "type": "string", "maxLength": 25000 },
-        "submittedAt": { "type": "string", "maxLength": 64 }
+        "improvedVersion": { "type": "string", "maxLength": 10000 },
+        "submittedAt": { "type": "string", "maxLength": 50 }
       },
       "required": ["id", "userId", "topic", "level", "overallScore", "text", "submittedAt"]
     },
     "VocabularyItem": {
       "title": "VocabularyItem",
-      "description": "Vocabulary item saved by the user",
+      "description": "German vocabulary item saved by the user",
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
         "userId": { "type": "string", "maxLength": 128 },
-        "language": { "type": "string", "enum": ["de", "en"] },
-        "word": { "type": "string", "maxLength": 200 },
-        "meaning_th": { "type": "string", "maxLength": 300 },
-        "part_of_speech": { "type": "string", "maxLength": 50 },
-        "example_sentence": { "type": "string", "maxLength": 500 },
-        "cefr_level": { "type": "string", "maxLength": 10 },
-        "created_at": { "type": "string", "maxLength": 64 }
+        "german": { "type": "string", "maxLength": 200 },
+        "thai": { "type": "string", "maxLength": 300 },
+        "partOfSpeech": { "type": "string", "maxLength": 50 },
+        "example": { "type": "string", "maxLength": 500 },
+        "level": { "type": "string", "maxLength": 10 },
+        "savedAt": { "type": "string", "maxLength": 50 }
       },
-      "required": ["id", "userId", "word", "meaning_th", "created_at"]
+      "required": ["id", "userId", "german", "thai", "savedAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
-      "description": "User profile document with immutable publicId"
-    },
-    "/user_directory/{publicId}": {
-      "schema": "UserDirectoryEntry",
-      "description": "Non-PII directory mapping publicId to user uid and displayName"
-    },
-    "/admins/{userId}": {
-      "schema": "AdminMarker",
-      "description": "Verified administrator accounts"
-    },
-    "/admin_settings/{settingId}": {
-      "schema": "AdminGateConfig",
-      "description": "Protected admin passcode gate configuration"
-    },
-    "/entitlements/{publicId}": {
-      "schema": "UserEntitlement",
-      "description": "Feature entitlements (e.g., English writing mode) keyed by immutable publicId"
+      "description": "User profile document"
     },
     "/users/{userId}/submissions/{submissionId}": {
       "schema": "Submission",
@@ -130,7 +63,7 @@
     },
     "/users/{userId}/vocabulary/{vocabId}": {
       "schema": "VocabularyItem",
-      "description": "User personal vocabulary bank"
+      "description": "User personal German vocabulary bank"
     }
   }
 }

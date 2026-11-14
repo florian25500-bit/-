@@ -13,13 +13,12 @@ import {
   FileQuestion,
   Trash2,
 } from 'lucide-react';
-import { AppLanguage, AssessmentResult, WritingTask } from '../types';
+import { AssessmentResult, WritingTask } from '../types';
 import { getAssessmentMaxScore } from '../utils/assessment-core';
 import { calculateGrade } from '../utils/scoring';
 
 interface DashboardViewProps {
   submissions: AssessmentResult[];
-  activeLanguage?: AppLanguage;
   onStartWriting: (task?: WritingTask) => void;
   onStartFreeWriting?: () => void;
   onViewAssessment: (result: AssessmentResult) => void;
@@ -30,7 +29,6 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   submissions,
-  activeLanguage = 'de',
   onStartWriting,
   onStartFreeWriting,
   onViewAssessment,
@@ -38,13 +36,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onDeleteSubmission,
   tasks,
 }) => {
-  const isEn = activeLanguage === 'en';
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const scopedSubmissions = submissions.filter(
-    (s) => (s.language || 'de') === activeLanguage
-  );
 
   const handleConfirmDelete = async (id: string) => {
     setDeletingId(id);
@@ -55,12 +48,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       setConfirmDeleteId(null);
     }
   };
-  const totalSubmissions = scopedSubmissions.length;
+  const totalSubmissions = submissions.length;
 
   const averagePercentage =
     totalSubmissions > 0
       ? Math.round(
-          (scopedSubmissions.reduce((acc, curr) => {
+          (submissions.reduce((acc, curr) => {
             const max = getAssessmentMaxScore(curr);
             return acc + (curr.total_score / max) * 100;
           }, 0) /
@@ -71,31 +64,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const averageGrade = averagePercentage !== null ? calculateGrade(averagePercentage, 100) : null;
 
-  const latestSubmission = scopedSubmissions[0];
+  const latestSubmission = submissions[0];
   const currentCEFR = latestSubmission?.cefr_estimate || null;
   const confidence = latestSubmission?.cefr_confidence || null;
   const mainWeakness = latestSubmission?.main_weakness_th || null;
 
   // Compute actual normalized category averages from user submissions (supports both 25-pt A1-A2 & 100-pt B1-C1)
-  const categoryKeys: { key: string; label: string }[] = isEn
-    ? [
-        { key: 'task_fulfillment', label: 'Task Fulfillment (ตอบตรงโจทย์)' },
-        { key: 'content_development', label: 'Content & Development (เนื้อหาและการลำดับ)' },
-        { key: 'vocabulary', label: 'Lexical Resource (คลังคำศัพท์วิชาการ)' },
-        { key: 'grammar', label: 'Grammatical Accuracy (ความถูกต้องของไวยากรณ์)' },
-        { key: 'cohesion', label: 'Coherence & Cohesion (การเชื่อมโยงความ)' },
-        { key: 'register', label: 'Register & Tone (ระดับภาษาและสไตล์)' },
-        { key: 'mechanics', label: 'Spelling & Punctuation (การสะกดและวรรคตอน)' },
-      ]
-    : [
-        { key: 'task_fulfillment', label: 'Aufgabenbewältigung (ตอบตรงโจทย์)' },
-        { key: 'content_development', label: 'Inhalt & Entwicklung (เนื้อหาและการลำดับ)' },
-        { key: 'vocabulary', label: 'Wortschatz (คลังคำศัพท์วิชาการ)' },
-        { key: 'grammar', label: 'Grammatik (ความถูกต้องของไวยากรณ์)' },
-        { key: 'cohesion', label: 'Kohärenz & Kohäsion (การเชื่อมโยงความ)' },
-        { key: 'register', label: 'Register & Stil (ระดับภาษาและสไตล์)' },
-        { key: 'mechanics', label: 'Rechtschreibung (การสะกดและเครื่องหมาย)' },
-      ];
+  const categoryKeys: { key: string; label: string }[] = [
+    { key: 'task_fulfillment', label: 'Aufgabenbewältigung (ตอบตรงโจทย์)' },
+    { key: 'content_development', label: 'Inhalt & Entwicklung (เนื้อหาและการลำดับ)' },
+    { key: 'vocabulary', label: 'Wortschatz (คลังคำศัพท์วิชาการ)' },
+    { key: 'grammar', label: 'Grammatik (ความถูกต้องของไวยากรณ์)' },
+    { key: 'cohesion', label: 'Kohärenz & Kohäsion (การเชื่อมโยงความ)' },
+    { key: 'register', label: 'Register & Stil (ระดับภาษาและสไตล์)' },
+    { key: 'mechanics', label: 'Rechtschreibung (การสะกดและเครื่องหมาย)' },
+  ];
 
   const categoryAverages = categoryKeys.map((cat) => {
     if (totalSubmissions === 0) {
@@ -104,7 +87,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     let ratioSum = 0;
     let earnedSum = 0;
     let possibleSum = 0;
-    scopedSubmissions.forEach((sub) => {
+    submissions.forEach((sub) => {
       const match = sub.category_scores.find((c) => c.category === cat.key);
       if (match && match.max_score > 0) {
         ratioSum += match.score / match.max_score;
@@ -135,15 +118,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100">
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>{isEn ? 'Welcome • English Mode (EN)' : 'Willkommen • Deutsch Mode (DE)'}</span>
+              <span>Willkommen</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              {isEn
-                ? 'แดชบอร์ดประเมินการเขียนภาษาอังกฤษ (English Writing Dashboard)'
-                : 'แดชบอร์ดประเมินการเขียน (Writing Dashboard)'}
+              แดชบอร์ดประเมินการเขียน (Writing Dashboard)
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
-              ติดตามสถิติและผลการประเมินจากงานเขียน{isEn ? 'ภาษาอังกฤษ' : 'ภาษาเยอรมัน'}จริงของคุณตามเกณฑ์มาตรฐาน CEFR (A1–C1)
+              ติดตามสถิติและผลการประเมินจากงานเขียนจริงของคุณตามเกณฑ์มาตรฐาน CEFR (A1–C1)
             </p>
           </div>
 
@@ -204,9 +185,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <p className="text-xs text-slate-500 leading-relaxed pt-1">
             {totalSubmissions > 0
               ? currentCEFR
-                ? isEn
-                  ? 'คำนวณตามเกณฑ์ CEFR & Cambridge จากงานเขียนล่าสุดของคุณ'
-                  : 'คำนวณตามเกณฑ์ Goethe & Telc จากงานเขียนล่าสุดของคุณ'
+                ? 'คำนวณตามเกณฑ์ Goethe & Telc จากงานเขียนล่าสุดของคุณ'
                 : 'งานเขียนล่าสุดมีหลักฐานทางภาษาไม่เพียงพอจึงไม่ระบุระดับ CEFR'
               : 'ส่งงานเขียนชิ้นแรกเพื่อเริ่มคำนวณระดับ CEFR'}
           </p>
@@ -272,11 +251,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {mainWeakness || (totalSubmissions === 0 ? 'รอวิเคราะห์หลังส่งงานเขียนแรก' : 'พัฒนาต่อยอดความสละสลวย')}
           </p>
           <button
-            onClick={() =>
-              onOpenLesson(
-                isEn ? 'en-lesson-clauses-conditionals-b1' : 'lesson-nebensaetze'
-              )
-            }
+            onClick={() => onOpenLesson('lesson-nebensaetze')}
             className="text-xs text-amber-800 font-bold hover:text-amber-950 flex items-center gap-1 pt-1 cursor-pointer transition-colors"
           >
             <span>เปิดบทเรียนแนะนำ</span>
@@ -309,9 +284,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-800">ยังไม่มีสถิติสมรรถนะ</h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  {isEn
-                    ? 'ระบบไม่แสดงข้อมูลเท็จใดๆ เมื่อคุณเขียนและส่งบทความภาษาอังกฤษชิ้นแรก เกณฑ์คะแนนทั้ง 7 หมวด (Task Fulfillment, Grammar, Lexical Resource ฯลฯ) จะถูกประมวลผลทันที'
-                    : 'ระบบไม่แสดงข้อมูลเท็จใดๆ เมื่อคุณเขียนและส่งบทความชิ้นแรก เกณฑ์คะแนนทั้ง 7 หมวด (Aufgabenbewältigung, Grammatik, Wortschatz ฯลฯ) จะถูกประมวลผลทันที'}
+                  ระบบไม่แสดงข้อมูลเท็จใดๆ เมื่อคุณเขียนและส่งบทความชิ้นแรก เกณฑ์คะแนนทั้ง 7 หมวด (Aufgabenbewältigung, Grammatik, Wortschatz ฯลฯ) จะถูกประมวลผลทันที
                 </p>
               </div>
               <button
@@ -386,26 +359,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div className="bg-white rounded-xl p-4 border border-slate-200/70 space-y-2 shadow-2xs">
               <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                {isEn ? 'CEFR B1/B2 (EN)' : 'Niveau B1/B2'}
+                Niveau B1/B2
               </span>
               <h3 className="font-bold text-sm text-slate-900">
-                {isEn
-                  ? 'Complex Clauses & Conditionals (although, despite, if)'
-                  : 'ตำแหน่งคำในอนุประโยค (Nebensätze)'}
+                ตำแหน่งคำในอนุประโยค (Nebensätze)
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                {isEn
-                  ? 'เรียนรู้ความต่างระหว่าง although vs. despite และการใช้ Conditionals เพื่อยกระดับโครงสร้างประโยค'
-                  : 'เรียนรู้กฎการย้ายกริยาไปท้ายประโยคหลัง weil, obwohl, dass เพื่อแก้ข้อผิดพลาดที่พบบ่อยที่สุด'}
+                เรียนรู้กฎการย้ายกริยาไปท้ายประโยคหลัง weil, obwohl, dass เพื่อแก้ข้อผิดพลาดที่พบบ่อยที่สุด
               </p>
             </div>
 
             <button
-              onClick={() =>
-                onOpenLesson(
-                  isEn ? 'en-lesson-clauses-conditionals-b1' : 'lesson-nebensaetze'
-                )
-              }
+              onClick={() => onOpenLesson('lesson-nebensaetze')}
               className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
               <span>เริ่มเรียนบทเรียนนี้</span>
@@ -453,12 +418,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {scopedSubmissions.length === 0 ? (
+        {submissions.length === 0 ? (
           <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
             <PenLine className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-            <p className="text-xs text-slate-600 font-semibold">
-              ยังไม่มีประวัติการส่งงานเขียน{isEn ? 'ภาษาอังกฤษ' : ''}
-            </p>
+            <p className="text-xs text-slate-600 font-semibold">ยังไม่มีประวัติการส่งงานเขียน</p>
             <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
               เมื่อคุณเขียนและส่งบทความ ระบบจะบันทึกผลการตรวจและสถิติคะแนนที่นี่
             </p>
@@ -484,21 +447,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {scopedSubmissions.map((sub) => (
+                {submissions.map((sub) => (
                   <tr
                     key={sub.id}
                     onClick={() => onViewAssessment(sub)}
                     className="hover:bg-slate-50/80 cursor-pointer transition-colors"
                   >
                     <td className="py-3.5 px-4 font-semibold text-slate-900 max-w-xs truncate">
-                      <span className="inline-flex items-center gap-1.5">
-                        {sub.language === 'en' && (
-                          <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold shrink-0">
-                            EN
-                          </span>
-                        )}
-                        <span className="truncate">{sub.task_title}</span>
-                      </span>
+                      {sub.task_title}
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-blue-50 text-blue-700 border border-blue-200/60">

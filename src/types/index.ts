@@ -2,7 +2,6 @@ export type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 export type ExtendedCEFR = 'A1' | 'A2' | 'A2+' | 'B1' | 'B1+' | 'B2' | 'B2+' | 'C1' | 'C1+';
 export type AssessedCEFR = ExtendedCEFR | null;
 export type Grade = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
-export type AppLanguage = 'de' | 'en';
 export type AssessmentMode = 'exam' | 'free';
 export type TargetLevelOption = CEFRLevel | 'AUTO';
 
@@ -13,14 +12,7 @@ export type TaskCategory =
   | 'Erörterung'
   | 'Bericht'
   | 'Beschwerde'
-  | 'Freier Text'
-  | 'Email'
-  | 'Formal Letter'
-  | 'Opinion Essay'
-  | 'Argumentative Essay'
-  | 'Report'
-  | 'Complaint Letter'
-  | 'Free Writing';
+  | 'Freier Text';
 
 export interface AttachedImagePayload {
   name: string;
@@ -30,7 +22,6 @@ export interface AttachedImagePayload {
 }
 
 export interface WritingSubmitOptions {
-  language?: AppLanguage;
   mode?: AssessmentMode;
   customPrompt?: string;
   targetLevel?: TargetLevelOption;
@@ -41,7 +32,7 @@ export interface WritingSubmitOptions {
 export interface WritingTask {
   id: string;
   task_id: string;
-  language: AppLanguage;
+  language: 'de';
   cefr_level: CEFRLevel;
   category: TaskCategory;
   topic: string;
@@ -137,15 +128,7 @@ export type GoethePraedikat =
   | 'nicht bestanden';
 
 export interface GoetheOfficialCriterion {
-  criterion_de:
-    | 'Aufgabenerfüllung'
-    | 'Kohärenz'
-    | 'Wortschatz'
-    | 'Strukturen'
-    | 'Task Achievement'
-    | 'Coherence & Cohesion'
-    | 'Lexical Resource'
-    | 'Grammatical Range & Accuracy';
+  criterion_de: 'Aufgabenerfüllung' | 'Kohärenz' | 'Wortschatz' | 'Strukturen';
   criterion_th: string;
   score: number;
   max_score: number;
@@ -173,7 +156,6 @@ export interface GoetheExamVerdict {
 export interface AssessmentResult {
   id: string;
   submission_id: string;
-  language?: AppLanguage;
   task_id: string;
   task_title: string;
   task_level: CEFRLevel | 'UNSPECIFIED';
@@ -232,7 +214,6 @@ export interface SubmissionHistoryItem {
 
 export interface GrammarLesson {
   id: string;
-  language?: AppLanguage;
   title: string;
   german_title: string;
   topic: string;
@@ -260,7 +241,6 @@ export interface GrammarLesson {
 
 export interface VocabularyItem {
   id: string;
-  language?: AppLanguage;
   word: string;
   article?: 'der' | 'die' | 'das';
   plural?: string;
@@ -273,19 +253,8 @@ export interface VocabularyItem {
   created_at: string;
 }
 
-export interface UserEntitlement {
-  publicId: string;
-  english_writing_enabled: boolean;
-  granted_by?: string;
-  granted_at?: string;
-  updated_at?: string;
-  note?: string;
-  displayName?: string;
-}
-
 export interface UserProfile {
   id: string;
-  publicId: string;
   name: string;
   email: string;
   target_level: CEFRLevel;

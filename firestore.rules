@@ -1,17 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Global safety net: deny all access by default
+    // Default deny all access
     match /{document=**} {
       allow read, write: if false;
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
     }
 
     function isSignedIn() {
@@ -26,150 +18,25 @@ service cloud.firestore {
       return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    function isValidPublicId(pid) {
-      return pid is string && pid.size() == 11 && pid.matches('^DS-[A-Z0-9]{8}$');
-    }
-
-    function isAdminEmail() {
-      return isSignedIn()
-        && request.auth.token.email == 'florian25500@gmail.com'
-        && request.auth.token.email_verified == true;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && (
-        isAdminEmail()
-        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
-    }
-
-    function isValidUser(data, userId) {
-      return data.keys().hasAll(['uid', 'publicId', 'createdAt'])
-        && data.keys().hasOnly(['uid', 'publicId', 'email', 'displayName', 'photoURL', 'createdAt', 'lastLoginAt'])
-        && data.uid is string && data.uid == userId && data.uid.size() <= 128
-        && isValidPublicId(data.publicId)
-        && data.createdAt is string && data.createdAt.size() > 0 && data.createdAt.size() <= 64
-        && (!('email' in data) || (data.email is string && data.email.size() <= 256))
-        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100))
-        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
-        && (!('lastLoginAt' in data) || (data.lastLoginAt is string && data.lastLoginAt.size() <= 64));
-    }
-
-    function isValidUserDirectory(data, publicId) {
-      return data.keys().hasAll(['publicId', 'uid', 'displayName', 'createdAt'])
-        && data.keys().hasOnly(['publicId', 'uid', 'displayName', 'createdAt'])
-        && isValidPublicId(data.publicId) && data.publicId == publicId
-        && data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128
-        && data.displayName is string && data.displayName.size() <= 100
-        && data.createdAt is string && data.createdAt.size() > 0 && data.createdAt.size() <= 64;
-    }
-
-    function isValidAdminMarker(data, userId) {
-      return data.keys().hasAll(['uid', 'email', 'verifiedAt'])
-        && data.keys().hasOnly(['uid', 'email', 'verifiedAt'])
-        && data.uid is string && data.uid == userId && data.uid.size() <= 128
-        && data.email is string && data.email == 'florian25500@gmail.com'
-        && data.verifiedAt is string && data.verifiedAt.size() > 0 && data.verifiedAt.size() <= 64;
-    }
-
-    function isValidAdminGate(data) {
-      return data.keys().hasAll(['adminEmail', 'passcode', 'updatedAt'])
-        && data.keys().hasOnly(['adminEmail', 'passcode', 'updatedAt'])
-        && data.adminEmail is string && data.adminEmail == 'florian25500@gmail.com'
-        && data.passcode is string && data.passcode.size() >= 4 && data.passcode.size() <= 128
-        && data.updatedAt is string && data.updatedAt.size() > 0 && data.updatedAt.size() <= 64;
-    }
-
-    function isValidEntitlement(data, publicId) {
-      return data.keys().hasAll(['publicId', 'english_writing_enabled', 'granted_by', 'updated_at'])
-        && data.keys().hasOnly(['publicId', 'english_writing_enabled', 'granted_by', 'granted_at', 'updated_at', 'note', 'displayName'])
-        && isValidPublicId(data.publicId) && data.publicId == publicId
-        && data.english_writing_enabled is bool
-        && data.granted_by is string && data.granted_by.size() > 0 && data.granted_by.size() <= 256
-        && data.updated_at is string && data.updated_at.size() > 0 && data.updated_at.size() <= 64
-        && (!('granted_at' in data) || (data.granted_at is string && data.granted_at.size() <= 64))
-        && (!('note' in data) || (data.note is string && data.note.size() <= 240))
-        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100));
-    }
-
-    // User profile documents (PII isolated to owner or verified admin; publicId immutable once set)
+    // User profile documents
     match /users/{userId} {
-      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
-      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming(), userId);
-      allow update: if isSignedIn() && isValidId(userId) && isValidUser(incoming(), userId) && (
-        (isOwner(userId)
-          && incoming().uid == existing().uid
-          && incoming().createdAt == existing().createdAt
-          && (!('publicId' in existing()) || incoming().publicId == existing().publicId)
-          && incoming().diff(existing()).affectedKeys().hasOnly(['publicId', 'email', 'displayName', 'photoURL', 'lastLoginAt']))
-      );
-      allow delete: if isOwner(userId) && isValidId(userId);
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidId(userId);
+      allow delete: if isOwner(userId);
 
       // Submissions (Evaluations) collection
       match /submissions/{submissionId} {
-        allow get: if isOwner(userId) && isValidId(submissionId);
-        allow list: if isOwner(userId);
+        allow read, list: if isOwner(userId);
         allow create, update: if isOwner(userId) && isValidId(submissionId);
-        allow delete: if isOwner(userId) && isValidId(submissionId);
+        allow delete: if isOwner(userId);
       }
 
       // Vocabulary bank collection
       match /vocabulary/{vocabId} {
-        allow get: if isOwner(userId) && isValidId(vocabId);
-        allow list: if isOwner(userId);
+        allow read, list: if isOwner(userId);
         allow create, update: if isOwner(userId) && isValidId(vocabId);
-        allow delete: if isOwner(userId) && isValidId(vocabId);
+        allow delete: if isOwner(userId);
       }
-    }
-
-    // Non-PII publicId directory
-    match /user_directory/{publicId} {
-      allow get: if isValidPublicId(publicId) && isSignedIn() && (
-        existing().uid == request.auth.uid || isAdmin()
-      );
-      allow list: if isAdminEmail();
-      allow create: if isSignedIn()
-        && isValidPublicId(publicId)
-        && isValidUserDirectory(incoming(), publicId)
-        && incoming().uid == request.auth.uid;
-      allow update: if isSignedIn()
-        && isValidPublicId(publicId)
-        && isValidUserDirectory(incoming(), publicId)
-        && incoming().publicId == existing().publicId
-        && incoming().uid == existing().uid
-        && incoming().createdAt == existing().createdAt
-        && existing().uid == request.auth.uid
-        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName']);
-      allow delete: if isAdmin();
-    }
-
-    // Verified admin marker (strictly gated by verified admin email)
-    match /admins/{userId} {
-      allow get: if isValidId(userId) && isOwner(userId) && isAdminEmail();
-      allow create: if isValidId(userId) && isOwner(userId) && isAdminEmail() && isValidAdminMarker(incoming(), userId);
-      allow update, delete: if false;
-    }
-
-    // Protected admin gate passcode config in DB
-    match /admin_settings/{settingId} {
-      allow get: if isValidId(settingId) && isAdminEmail();
-      allow create, update: if isValidId(settingId) && isAdminEmail() && isValidAdminGate(incoming());
-      allow delete: if false;
-    }
-
-    // Feature entitlements keyed by immutable publicId
-    match /entitlements/{publicId} {
-      allow get: if isValidPublicId(publicId) && isSignedIn() && (
-        isAdmin()
-        || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
-            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.publicId == publicId)
-      );
-      allow list: if isAdminEmail();
-      allow create: if isAdmin() && isValidPublicId(publicId) && isValidEntitlement(incoming(), publicId);
-      allow update: if isAdmin() && isValidPublicId(publicId) && isValidEntitlement(incoming(), publicId)
-        && incoming().publicId == existing().publicId
-        && incoming().diff(existing()).affectedKeys().hasOnly(['english_writing_enabled', 'granted_by', 'granted_at', 'updated_at', 'note', 'displayName']);
-      allow delete: if isAdmin() && isValidPublicId(publicId);
     }
   }
 }

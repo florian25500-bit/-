@@ -12,22 +12,19 @@ import {
   Clock,
   FileCheck2,
 } from 'lucide-react';
-import { AppLanguage, WritingTask } from '../types';
+import { WritingTask } from '../types';
 
 interface LandingViewProps {
   onStartWriting: (task?: WritingTask) => void;
   tasks: WritingTask[];
-  activeLanguage?: AppLanguage;
   onOpenRubric: () => void;
 }
 
 export const LandingView: React.FC<LandingViewProps> = ({
   onStartWriting,
   tasks,
-  activeLanguage = 'de',
   onOpenRubric,
 }) => {
-  const isEn = activeLanguage === 'en';
   const a1Tasks = tasks.filter((t) => t.cefr_level === 'A1');
   const a2Tasks = tasks.filter((t) => t.cefr_level === 'A2');
   const b1Tasks = tasks.filter((t) => t.cefr_level === 'B1');
@@ -47,18 +44,14 @@ export const LandingView: React.FC<LandingViewProps> = ({
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-            {isEn
-              ? 'ระบบประเมินงานเขียนภาษาอังกฤษ '
-              : 'ระบบประเมินงานเขียนภาษาเยอรมัน '}
+            ระบบประเมินงานเขียนภาษาเยอรมัน{' '}
             <span className="text-blue-600">
               ระดับ A1 – C1
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-sans">
-            {isEn
-              ? 'ฝึกเขียนข้อสอบภาษาอังกฤษด้วยเกณฑ์วิชาการแท้จริง (A1–A2 เต็ม 25 คะแนน • B1–C1 เต็ม 100 คะแนน) ปรับความยากของโจทย์ตรงตามระดับที่สอบ พร้อมวิเคราะห์ข้อผิดพลาดและอธิบายหลักไวยากรณ์เป็นภาษาไทย'
-              : 'ฝึกเขียนข้อสอบภาษาเยอรมันด้วยเกณฑ์วิชาการแท้จริง (A1–A2 เต็ม 25 คะแนน • B1–C1 เต็ม 100 คะแนน) ปรับความยากของโจทย์ตรงตามระดับที่สอบ พร้อมวิเคราะห์ข้อผิดพลาดและอธิบายหลักไวยากรณ์เป็นภาษาไทย'}
+            ฝึกเขียนข้อสอบภาษาเยอรมันด้วยเกณฑ์วิชาการแท้จริง (A1–A2 เต็ม 25 คะแนน • B1–C1 เต็ม 100 คะแนน) ปรับความยากของโจทย์ตรงตามระดับที่สอบ พร้อมวิเคราะห์ข้อผิดพลาดและอธิบายหลักไวยากรณ์เป็นภาษาไทย
           </p>
 
           <div className="flex flex-wrap items-center gap-3.5 pt-2">
@@ -172,9 +165,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               เลือกโจทย์ฝึกเขียนตามระดับ (Writing Tasks)
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              {isEn
-                ? 'รองรับ 6 รูปแบบ: Email, Formal Letter, Opinion Essay, Argumentative Essay, Report, Complaint Letter'
-                : 'รองรับ 6 รูปแบบ: E-Mail, Brief, Stellungnahme, Erörterung, Bericht, Beschwerde'}
+              รองรับ 6 รูปแบบ: E-Mail, Brief, Stellungnahme, Erörterung, Bericht, Beschwerde
             </p>
           </div>
           <button
@@ -360,9 +351,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               เกณฑ์การประเมินตามระดับสอบ (A1–A2 เต็ม 25 คะแนน • B1–C1 เต็ม 100 คะแนน)
             </h3>
             <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-              {isEn
-                ? 'ระดับ A1–A2 (ผ่าน 15/25): Task Fulfillment (6) • Content (3) • Vocabulary (5) • Grammar (5) • Cohesion (3) • Register (1) • Mechanics (2) — ระดับ B1–C1 (ผ่าน 60/100): 20 / 15 / 20 / 20 / 15 / 5 / 5'
-                : 'ระดับ A1–A2 (ผ่าน 15/25): Aufgabenbewältigung (6) • Inhalt (3) • Wortschatz (5) • Grammatik (5) • Kohäsion (3) • Register (1) • Rechtschreibung (2) — ระดับ B1–C1 (ผ่าน 60/100): 20 / 15 / 20 / 20 / 15 / 5 / 5'}
+              ระดับ A1–A2 (ผ่าน 15/25): Aufgabenbewältigung (6) • Inhalt (3) • Wortschatz (5) • Grammatik (5) • Kohäsion (3) • Register (1) • Rechtschreibung (2) — ระดับ B1–C1 (ผ่าน 60/100): 20 / 15 / 20 / 20 / 15 / 5 / 5
             </p>
           </div>
           <button
