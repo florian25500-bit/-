@@ -111,8 +111,8 @@ export function countGermanWords(text: string): number {
   if (!text || typeof text !== 'string') return 0;
   const trimmed = text.trim();
   if (!trimmed) return 0;
-  // Match whitespace-separated tokens, handling German characters
-  const words = trimmed.match(/[\p{L}\p{N}_\-ßäöüÄÖÜ]+/gu);
+  // Match whitespace-separated tokens, handling German umlauts/ß and English contractions
+  const words = trimmed.match(/[\p{L}\p{N}_\-’'ßäöüÄÖÜ]+/gu);
   return words ? words.length : 0;
 }
 

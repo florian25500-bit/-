@@ -50,6 +50,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [savedVocabId, setSavedVocabId] = useState<string | null>(null);
 
+  const isEn = assessment.language === 'en';
   const maxTotalScore = getAssessmentMaxScore(assessment);
   const goetheVerdict =
     assessment.goethe_verdict ||
@@ -58,7 +59,8 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
       assessment.category_scores,
       assessment.task_level,
       assessment.assessment_mode || 'exam',
-      maxTotalScore
+      maxTotalScore,
+      assessment.language || 'de'
     );
   const goetheMaxScore = goetheVerdict.max_score || maxTotalScore;
   const goetheScore =
@@ -76,7 +78,11 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
   }, [assessment.id]);
 
   const getLessonIdForError = (err: AssessmentError): string => {
-    return normalizeLessonId(undefined, `${err.rule} ${err.subcategory} ${err.category}`);
+    return normalizeLessonId(
+      undefined,
+      `${err.rule} ${err.subcategory} ${err.category}`,
+      assessment.language || 'de'
+    );
   };
 
   const handleCopy = (text: string, label: string) => {
@@ -232,7 +238,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               >
                 <ShieldCheck className="w-3 h-3" />
                 <span>
-                  Goethe: {goetheVerdict.passed ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์'} ({goetheScore}/{goetheMaxScore} •{' '}
+                  {isEn ? 'CEFR EN' : 'Goethe'}: {goetheVerdict.passed ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์'} ({goetheScore}/{goetheMaxScore} •{' '}
                   {goetheVerdict.praedikat_de})
                 </span>
               </span>
@@ -271,7 +277,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               •{' '}
               {assessment.task_level === 'UNSPECIFIED'
                 ? 'เกณฑ์ระดับ: ประเมินอิสระ (ไม่กำหนดระดับ)'
-                : `ระดับเป้าหมาย: Niveau ${assessment.task_level}`}{' '}
+                : `ระดับเป้าหมาย: ${isEn ? 'CEFR ' : 'Niveau '}${assessment.task_level}`}{' '}
               • ความยาว: {assessment.word_count} คำ
               {assessment.transcribed_from_image ? ' (ถอดความจากรูปภาพ)' : ''}
             </p>
@@ -482,7 +488,11 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                     )}
                     <span>
                       {goetheVerdict.passed
-                        ? 'ผ่านเกณฑ์สอบวัดระดับ Goethe (Bestanden)'
+                        ? isEn
+                          ? 'ผ่านเกณฑ์สอบวัดระดับภาษาอังกฤษ CEFR (Passed)'
+                          : 'ผ่านเกณฑ์สอบวัดระดับ Goethe (Bestanden)'
+                        : isEn
+                        ? 'ยังไม่ผ่านเกณฑ์สอบวัดระดับภาษาอังกฤษ CEFR (Not Passed)'
                         : 'ยังไม่ผ่านเกณฑ์สอบวัดระดับ Goethe (Nicht bestanden)'}
                     </span>
                   </span>
@@ -549,7 +559,9 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-xs sm:text-sm font-bold text-slate-900">
-                  เกณฑ์การตรวจทางการของ Goethe-Institut ที่ใช้ลงคะแนน (Offizielle Bewertungskriterien Schreiben — {goetheMaxScore} Punkte)
+                  {isEn
+                    ? `เกณฑ์การประเมินมาตรฐานสากล 4 ด้าน (Official Writing Criteria — ${goetheMaxScore} Points)`
+                    : `เกณฑ์การตรวจทางการของ Goethe-Institut ที่ใช้ลงคะแนน (Offizielle Bewertungskriterien Schreiben — ${goetheMaxScore} Punkte)`}
                 </h3>
                 <span className="text-[11px] text-slate-500">
                   สรุปคะแนนจริงที่ลงให้ครบทั้ง 4 ด้านทางการ
@@ -614,7 +626,9 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             {/* Official Goethe Prädikat Scale */}
             <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 space-y-2">
               <span className="text-[11px] font-bold text-slate-700 block">
-                ตารางเกณฑ์ตัดสินผลสอบทางการ Goethe-Institut (Prädikate):
+                {isEn
+                  ? 'ตารางเกณฑ์ระดับคะแนนมาตรฐาน CEFR Writing (Performance Bands):'
+                  : 'ตารางเกณฑ์ตัดสินผลสอบทางการ Goethe-Institut (Prädikate):'}
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
                 {praedikatScale.map((tier) => {
@@ -676,7 +690,9 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   <Target className="w-4 h-4 text-blue-600" />
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
-                      ผลการตรวจประเด็นบังคับรายข้อ (Leitpunkte Check)
+                      {isEn
+                        ? 'ผลการตรวจประเด็นบังคับรายข้อ (Key Task Points Check)'
+                        : 'ผลการตรวจประเด็นบังคับรายข้อ (Leitpunkte Check)'}
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
                       ตรวจสอบจากเนื้อหาจริงในงานเขียนของคุณเทียบกับคำสั่งโจทย์ทีละประเด็น
@@ -690,18 +706,18 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   const statusBadge =
                     reqEval.status === 'fulfilled'
                       ? {
-                          label: 'ตอบครบถ้วน (Erfüllt)',
+                          label: isEn ? 'ตอบครบถ้วน (Fulfilled)' : 'ตอบครบถ้วน (Erfüllt)',
                           cls: 'bg-emerald-50 text-emerald-800 border-emerald-200',
                           icon: <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />,
                         }
                       : reqEval.status === 'partial'
                       ? {
-                          label: 'ตอบบางส่วน (Teilweise)',
+                          label: isEn ? 'ตอบบางส่วน (Partial)' : 'ตอบบางส่วน (Teilweise)',
                           cls: 'bg-amber-50 text-amber-800 border-amber-200',
                           icon: <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />,
                         }
                       : {
-                          label: 'ยังไม่ปรากฏในงานเขียน (Fehlt)',
+                          label: isEn ? 'ยังไม่ปรากฏในงานเขียน (Missing)' : 'ยังไม่ปรากฏในงานเขียน (Fehlt)',
                           cls: 'bg-rose-50 text-rose-800 border-rose-200',
                           icon: <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />,
                         };
@@ -799,9 +815,11 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                     <div className="flex items-center justify-between text-xs">
                       <div>
                         <span className="font-bold text-slate-900 block">
-                          {cat.label_de}
+                          {isEn ? cat.label_en : cat.label_de}
                         </span>
-                        <span className="text-[10px] text-slate-500">{cat.label_en}</span>
+                        <span className="text-[10px] text-slate-500">
+                          {isEn ? 'CEFR Writing Criterion' : cat.label_en}
+                        </span>
                       </div>
                       <div className="text-right">
                         <span className="font-extrabold text-sm text-slate-900">
@@ -883,13 +901,13 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
               <span className="text-slate-500 font-semibold">สัญลักษณ์สี:</span>
               <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200">
-                ไวยากรณ์ (Grammatik)
+                ไวยากรณ์ ({isEn ? 'Grammar' : 'Grammatik'})
               </span>
               <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-                คำศัพท์ (Wortschatz)
+                คำศัพท์ ({isEn ? 'Vocabulary' : 'Wortschatz'})
               </span>
               <span className="px-2 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200">
-                คำเชื่อม (Kohäsion)
+                คำเชื่อม ({isEn ? 'Cohesion' : 'Kohäsion'})
               </span>
               <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                 การสะกด/วรรคตอน
@@ -941,7 +959,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
 
                   <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 text-xs">
                     <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
-                      ข้อความที่ถูกต้อง (Korrektur):
+                      ข้อความที่ถูกต้อง ({isEn ? 'Correction' : 'Korrektur'}):
                     </span>
                     <span className="text-sm font-bold text-emerald-900">
                       {selectedError.corrected_text}
@@ -953,7 +971,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                 <div className="space-y-1.5">
                   <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                     <Info className="w-4 h-4 text-blue-600" />
-                    <span>คำอธิบายเหตุผล (Erklärung auf Thai):</span>
+                    <span>คำอธิบายเหตุผล ({isEn ? 'Explanation' : 'Erklärung auf Thai'}):</span>
                   </h4>
                   <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/60">
                     {selectedError.explanation_th}
@@ -963,7 +981,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                 {/* Relevant Grammar Rule */}
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    กฎไวยากรณ์ที่เกี่ยวข้อง (Regel):
+                    กฎไวยากรณ์ที่เกี่ยวข้อง ({isEn ? 'Grammar Rule' : 'Regel'}):
                   </span>
                   <div className="text-xs font-semibold text-blue-700">
                     {selectedError.rule}
@@ -974,7 +992,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                 {selectedError.examples && selectedError.examples.length > 0 && (
                   <div className="space-y-2 pt-2 border-t border-slate-100">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      ตัวอย่างประโยคที่ถูกต้อง (Beispiele):
+                      ตัวอย่างประโยคที่ถูกต้อง ({isEn ? 'Examples' : 'Beispiele'}):
                     </span>
                     {selectedError.examples.map((ex, i) => (
                       <div key={i} className="text-xs bg-slate-50 p-2.5 rounded-lg space-y-0.5 border border-slate-200/50">
@@ -1151,7 +1169,10 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 {versionTab === 'corrected' && 'เวอร์ชันแก้ไขไวยากรณ์โดยคงโครงสร้างเดิมของผู้เรียน'}
                 {versionTab === 'b2_improved' && 'เวอร์ชันยกระดับคำเชื่อมและคำศัพท์ตามเกณฑ์ B2'}
-                {versionTab === 'c1_model' && 'เวอร์ชันเชิงวิชาการระดับ C1 (Nominalstil & FVG)'}
+                {versionTab === 'c1_model' &&
+                  (isEn
+                    ? 'เวอร์ชันเชิงวิชาการระดับ C1 (Advanced Cohesion & Inversion)'
+                    : 'เวอร์ชันเชิงวิชาการระดับ C1 (Nominalstil & FVG)')}
               </span>
               <button
                 onClick={() =>
@@ -1188,7 +1209,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               บทเรียนที่แนะนำเฉพาะบุคคล (Personalized Learning Recommendations)
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              ระบบคัดเลือกบทเรียนไวยากรณ์ภาษาเยอรมันที่ตรงกับข้อผิดพลาดที่เกิดขึ้นในงานเขียนชิ้นนี้
+              ระบบคัดเลือกบทเรียนไวยากรณ์{isEn ? 'ภาษาอังกฤษ' : 'ภาษาเยอรมัน'}ที่ตรงกับข้อผิดพลาดที่เกิดขึ้นในงานเขียนชิ้นนี้
             </p>
           </div>
 
@@ -1226,7 +1247,11 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                 </div>
 
                 <button
-                  onClick={() => onOpenLesson(normalizeLessonId(rec.lesson_id, rec.topic))}
+                  onClick={() =>
+                    onOpenLesson(
+                      normalizeLessonId(rec.lesson_id, rec.topic, assessment.language || 'de')
+                    )
+                  }
                   className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
@@ -1265,44 +1290,48 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                 {[
                   {
                     key: 'task_fulfillment' as const,
-                    title: '1. Aufgabenbewältigung (Task Fulfillment)',
+                    title: isEn ? '1. Task Fulfillment' : '1. Aufgabenbewältigung (Task Fulfillment)',
                     sub: 'ตอบครบทุกประเด็น, ทำตามข้อกำหนด, ประเภทข้อความถูกต้อง',
                     max: activeWeights.task_fulfillment,
                   },
                   {
                     key: 'content_development' as const,
-                    title: '2. Inhalt & Entwicklung (Content Development)',
+                    title: isEn ? '2. Content & Development' : '2. Inhalt & Entwicklung (Content Development)',
                     sub: 'คุณภาพของเนื้อหา, ความสมเหตุสมผล, ตัวอย่างประกอบ',
                     max: activeWeights.content_development,
                   },
                   {
                     key: 'vocabulary' as const,
-                    title: '3. Wortschatz (Vocabulary)',
+                    title: isEn ? '3. Lexical Resource (Vocabulary)' : '3. Wortschatz (Vocabulary)',
                     sub: 'Range, Accuracy, Collocations, Context, Paraphrasing',
                     max: activeWeights.vocabulary,
                   },
                   {
                     key: 'grammar' as const,
-                    title: '4. Grammatik (Grammar)',
-                    sub: 'Verb Conjugation, Word Order, Cases, Sentence Structure',
+                    title: isEn ? '4. Grammatical Range & Accuracy' : '4. Grammatik (Grammar)',
+                    sub: isEn
+                      ? 'Tenses, Subject-Verb Agreement, Clauses, Word Order'
+                      : 'Verb Conjugation, Word Order, Cases, Sentence Structure',
                     max: activeWeights.grammar,
                   },
                   {
                     key: 'cohesion' as const,
-                    title: '5. Kohärenz & Kohäsion (Cohesion)',
+                    title: isEn ? '5. Coherence & Cohesion' : '5. Kohärenz & Kohäsion (Cohesion)',
                     sub: 'Organisation, Paragraphs, Connectors, Flow',
                     max: activeWeights.cohesion,
                   },
                   {
                     key: 'register' as const,
-                    title: '6. Register & Stil (Register & Style)',
+                    title: isEn ? '6. Register & Tone' : '6. Register & Stil (Register & Style)',
                     sub: 'Formality, ความเหมาะสมกับผู้อ่าน',
                     max: activeWeights.register,
                   },
                   {
                     key: 'mechanics' as const,
-                    title: '7. Rechtschreibung (Mechanics)',
-                    sub: 'Groß-/Kleinschreibung, Kommasetzung, Zeichen',
+                    title: isEn ? '7. Spelling & Punctuation (Mechanics)' : '7. Rechtschreibung (Mechanics)',
+                    sub: isEn
+                      ? 'Spelling, Capitalization, Commas & Semicolons'
+                      : 'Groß-/Kleinschreibung, Kommasetzung, Zeichen',
                     max: activeWeights.mechanics,
                   },
                 ].map((row) => {

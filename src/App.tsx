@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { LandingView } from './components/LandingView';
@@ -10,10 +10,16 @@ import { VocabularyBankView } from './components/VocabularyBankView';
 import { HistoryView } from './components/HistoryView';
 import { RubricView } from './components/RubricView';
 import { AuthView } from './components/AuthView';
+import { AdminPasscodeModal } from './components/AdminPasscodeModal';
+import { AdminPanelView } from './components/AdminPanelView';
 import { SAMPLE_TASKS } from './data/sampleTasks';
 import { GRAMMAR_LESSONS } from './data/grammarLessons';
 import { INITIAL_VOCABULARY } from './data/sampleVocabulary';
+import { ENGLISH_EXAM_PROMPTS_POOL } from './data/englishExamPromptsPool';
+import { ENGLISH_GRAMMAR_LESSONS } from './data/englishGrammarLessons';
+import { ENGLISH_VOCABULARY } from './data/englishVocabulary';
 import {
+  AppLanguage,
   AssessmentMode,
   AssessmentResult,
   WritingSubmitOptions,
@@ -28,6 +34,15 @@ import {
   AppUser,
   getLocalUser,
   logOut,
+  syncUserProfile,
+  resolvePublicUserId,
+  isAdminSessionVerified,
+  getAdminSessionToken,
+  verifyAdminPasscode,
+  fetchUserEntitlement,
+  adminListEntitlements,
+  adminSetUserEnglishAccess,
+  adminUpdatePasscode,
   saveUserSubmission,
   getUserSubmissions,
   deleteUserSubmission,
@@ -36,32 +51,82 @@ import {
   deleteUserVocabulary,
 } from './lib/firebase';
 import { removeSubmissionFromState } from './utils/submission-helpers';
+import { ADMIN_EMAIL, isAdminEmail } from './utils/user-id';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [tasks, setTasks] = useState<WritingTask[]>(SAMPLE_TASKS);
-  const [selectedTask, setSelectedTask] = useState<WritingTask>(SAMPLE_TASKS[0]);
+  const [activeLanguage, setActiveLanguage] = useState<AppLanguage>('de');
+
+  const [germanTasks, setGermanTasks] = useState<WritingTask[]>(SAMPLE_TASKS);
+  const [englishTasks, setEnglishTasks] = useState<WritingTask[]>(ENGLISH_EXAM_PROMPTS_POOL);
+  const [selectedGermanTask, setSelectedGermanTask] = useState<WritingTask>(SAMPLE_TASKS[0]);
+  const [selectedEnglishTask, setSelectedEnglishTask] = useState<WritingTask>(
+    ENGLISH_EXAM_PROMPTS_POOL[0]
+  );
+
   const [submissions, setSubmissions] = useState<AssessmentResult[]>([]);
   const [currentAssessment, setCurrentAssessment] = useState<AssessmentResult | null>(null);
-  const [lessons, setLessons] = useState<GrammarLesson[]>(GRAMMAR_LESSONS);
-  const [vocabulary, setVocabulary] = useState<VocabularyItem[]>(INITIAL_VOCABULARY);
+
+  const [germanLessons, setGermanLessons] = useState<GrammarLesson[]>(GRAMMAR_LESSONS);
+  const [englishLessons, setEnglishLessons] = useState<GrammarLesson[]>(ENGLISH_GRAMMAR_LESSONS);
+
+  const [germanVocab, setGermanVocab] = useState<VocabularyItem[]>(INITIAL_VOCABULARY);
+  const [englishVocab, setEnglishVocab] = useState<VocabularyItem[]>(ENGLISH_VOCABULARY);
+
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [editorMode, setEditorMode] = useState<AssessmentMode>('exam');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Authentication states (supports both Firebase Auth and Instant Local Profiles)
+  // Authentication & Immutable ID & Admin Gate & Feature Entitlement States
   const [user, setUser] = useState<FirebaseUser | AppUser | null>(() => getLocalUser());
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
-  // Helper to load user-specific data
-  const loadUserData = async (activeUser: FirebaseUser | AppUser) => {
+  const [adminPasscodeVerified, setAdminPasscodeVerified] = useState<boolean>(() => {
+    const u = getLocalUser();
+    return Boolean(u && isAdminEmail(u.email) && isAdminSessionVerified(u));
+  });
+  const [englishWritingEnabled, setEnglishWritingEnabled] = useState<boolean>(false);
+
+  const publicId = user ? resolvePublicUserId(user) : '';
+  const isAdminUser = Boolean(user && isAdminEmail(user.email));
+  const isVerifiedAdmin = isAdminUser && adminPasscodeVerified;
+
+  const tasks = activeLanguage === 'en' ? englishTasks : germanTasks;
+  const selectedTask = activeLanguage === 'en' ? selectedEnglishTask : selectedGermanTask;
+  const lessons = activeLanguage === 'en' ? englishLessons : germanLessons;
+  const vocabulary = activeLanguage === 'en' ? englishVocab : germanVocab;
+
+  const setSelectedTask = (task: WritingTask) => {
+    if (activeLanguage === 'en') {
+      setSelectedEnglishTask(task);
+    } else {
+      setSelectedGermanTask(task);
+    }
+  };
+
+  // Helper to load user-specific submissions, vocabulary, and English access entitlement
+  const loadUserData = useCallback(async (activeUser: FirebaseUser | AppUser) => {
     try {
-      const [userSubs, userVocab] = await Promise.allSettled([
+      const resolvedId = await syncUserProfile(activeUser);
+      setAdminPasscodeVerified(
+        isAdminEmail(activeUser.email) && isAdminSessionVerified(activeUser)
+      );
+
+      const [userSubs, userVocab, entitlement] = await Promise.allSettled([
         getUserSubmissions(activeUser.uid),
         getUserVocabulary(activeUser.uid),
+        resolvedId ? fetchUserEntitlement(resolvedId) : Promise.resolve(null),
       ]);
+
+      if (entitlement.status === 'fulfilled') {
+        const enabled = Boolean(entitlement.value?.english_writing_enabled);
+        setEnglishWritingEnabled(enabled);
+        if (!enabled) {
+          setActiveLanguage('de');
+        }
+      }
 
       if (userSubs.status === 'fulfilled') {
         const fetchedSubs = userSubs.value || [];
@@ -74,35 +139,54 @@ export default function App() {
       }
 
       if (userVocab.status === 'fulfilled' && userVocab.value?.length > 0) {
-        const mappedVocab: VocabularyItem[] = userVocab.value.map((v) => ({
-          id: v.id,
-          word: v.word,
-          part_of_speech: (v.part_of_speech as any) || 'Noun',
-          article: (v.article as any) || undefined,
-          meaning_th: v.meaning_th,
-          example_sentence: v.example_sentence || '',
-          example_translation_th: v.example_translation_th || '',
-          cefr_level: (v.cefr_level as any) || 'B2',
-          created_at: v.created_at,
-        }));
-        setVocabulary((prev) => {
-          const ids = new Set(prev.map((i) => i.id));
-          const newItems = mappedVocab.filter((v) => !ids.has(v.id));
-          return [...newItems, ...prev];
+        const mappedDe: VocabularyItem[] = [];
+        const mappedEn: VocabularyItem[] = [];
+        userVocab.value.forEach((v) => {
+          const item: VocabularyItem = {
+            id: v.id,
+            language: v.language === 'en' ? 'en' : 'de',
+            word: v.word,
+            part_of_speech: (v.part_of_speech as any) || 'Noun',
+            article: (v.article as any) || undefined,
+            meaning_th: v.meaning_th,
+            example_sentence: v.example_sentence || '',
+            example_translation_th: v.example_translation_th || '',
+            cefr_level: (v.cefr_level as any) || 'B2',
+            created_at: v.created_at,
+          };
+          if (item.language === 'en') {
+            mappedEn.push(item);
+          } else {
+            mappedDe.push(item);
+          }
         });
+
+        if (mappedDe.length > 0) {
+          setGermanVocab((prev) => {
+            const ids = new Set(prev.map((i) => i.id));
+            const newItems = mappedDe.filter((v) => !ids.has(v.id));
+            return [...newItems, ...prev];
+          });
+        }
+        if (mappedEn.length > 0) {
+          setEnglishVocab((prev) => {
+            const ids = new Set(prev.map((i) => i.id));
+            const newItems = mappedEn.filter((v) => !ids.has(v.id));
+            return [...newItems, ...prev];
+          });
+        }
       }
     } catch (err) {
       console.warn('Error loading user data:', err);
     }
-  };
+  }, []);
 
   // Listen to Firebase Auth state or local user profile
   useEffect(() => {
-    // If local user is already found on mount, load data immediately
     const local = getLocalUser();
     if (local) {
       setUser(local);
-      loadUserData(local);
+      void loadUserData(local);
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -120,45 +204,70 @@ export default function App() {
           setUser(null);
           setSubmissions([]);
           setCurrentAssessment(null);
+          setAdminPasscodeVerified(false);
+          setEnglishWritingEnabled(false);
+          setActiveLanguage('de');
         }
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [loadUserData]);
 
-  // Load initial static resources (tasks, lessons)
+  // Load initial static resources for both DE and EN
   useEffect(() => {
     async function loadResources() {
       try {
-        const [tasksRes, lessonsRes] = await Promise.allSettled([
-          fetch('/api/tasks').then((r) => r.json()),
-          fetch('/api/lessons').then((r) => r.json()),
+        const [deTasksRes, enTasksRes, deLessonsRes, enLessonsRes] = await Promise.allSettled([
+          fetch('/api/tasks?language=de').then((r) => r.json()),
+          fetch('/api/tasks?language=en').then((r) => r.json()),
+          fetch('/api/lessons?language=de').then((r) => r.json()),
+          fetch('/api/lessons?language=en').then((r) => r.json()),
         ]);
 
-        if (tasksRes.status === 'fulfilled' && tasksRes.value?.tasks?.length > 0) {
-          setTasks(tasksRes.value.tasks);
-          const randomIdx = Math.floor(Math.random() * tasksRes.value.tasks.length);
-          setSelectedTask(tasksRes.value.tasks[randomIdx]);
+        if (deTasksRes.status === 'fulfilled' && deTasksRes.value?.tasks?.length > 0) {
+          setGermanTasks(deTasksRes.value.tasks);
+          const randomIdx = Math.floor(Math.random() * deTasksRes.value.tasks.length);
+          setSelectedGermanTask(deTasksRes.value.tasks[randomIdx]);
         }
 
-        if (lessonsRes.status === 'fulfilled' && lessonsRes.value?.lessons) {
-          setLessons(lessonsRes.value.lessons);
+        if (enTasksRes.status === 'fulfilled' && enTasksRes.value?.tasks?.length > 0) {
+          setEnglishTasks(enTasksRes.value.tasks);
+          const randomIdx = Math.floor(Math.random() * enTasksRes.value.tasks.length);
+          setSelectedEnglishTask(enTasksRes.value.tasks[randomIdx]);
+        }
+
+        if (deLessonsRes.status === 'fulfilled' && deLessonsRes.value?.lessons) {
+          setGermanLessons(deLessonsRes.value.lessons);
+        }
+
+        if (enLessonsRes.status === 'fulfilled' && enLessonsRes.value?.lessons) {
+          setEnglishLessons(enLessonsRes.value.lessons);
         }
       } catch (err) {
         console.warn('Error loading static resources:', err);
       }
     }
 
-    loadResources();
+    void loadResources();
   }, []);
 
+  const handleChangeLanguage = (lang: AppLanguage) => {
+    if (lang === 'en' && !englishWritingEnabled) return;
+    setActiveLanguage(lang);
+    setActiveLessonId(null);
+    if (activeTab === 'admin') {
+      setActiveTab('editor');
+    }
+  };
+
   const handleRollRandomTask = (levelFilter?: string) => {
-    let pool = [...tasks];
+    const activePool = activeLanguage === 'en' ? englishTasks : germanTasks;
+    let pool = [...activePool];
     if (levelFilter && levelFilter !== 'ALL') {
       pool = pool.filter((t) => t.cefr_level === levelFilter);
     }
-    if (pool.length === 0) pool = [...tasks];
+    if (pool.length === 0) pool = [...activePool];
     const randomIndex = Math.floor(Math.random() * pool.length);
     setSelectedTask(pool[randomIndex]);
   };
@@ -170,7 +279,12 @@ export default function App() {
   ) => {
     setEditorMode(mode);
     if (task) {
-      setSelectedTask(task);
+      if (task.language === 'en' && englishWritingEnabled) {
+        setActiveLanguage('en');
+        setSelectedEnglishTask(task);
+      } else {
+        setSelectedTask(task);
+      }
     } else if (mode === 'exam') {
       handleRollRandomTask(levelFilter);
     }
@@ -186,8 +300,10 @@ export default function App() {
     setIsSubmitting(true);
     try {
       const mode = options?.mode || 'exam';
+      const lang: AppLanguage = options?.language || activeLanguage;
       const payload: Record<string, any> = {
         mode,
+        language: lang,
         task_id: mode === 'exam' ? task.id : 'free-writing',
         original_text: text,
       };
@@ -208,17 +324,30 @@ export default function App() {
         body: JSON.stringify(payload),
       });
 
+      const rawText = await res.text();
+      let data: any = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        data = {};
+      }
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        const msg = errData.error || 'การประเมินผลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+        let fallbackMsg = 'การประเมินผลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+        if (res.status === 413) {
+          fallbackMsg = 'ไฟล์รูปภาพมีขนาดใหญ่เกินกำหนด กรุณาลดขนาดไฟล์รูปแล้วลองใหม่อีกครั้ง';
+        } else if (res.status === 504 || res.status === 502) {
+          fallbackMsg = 'การเชื่อมต่อเซิร์ฟเวอร์ AI ใช้เวลานานเกินกำหนด กรุณากดลองส่งตรวจอีกครั้ง';
+        } else if (res.status >= 500) {
+          fallbackMsg = `เซิร์ฟเวอร์ AI ขัดข้องชั่วคราว (${res.status}) กรุณากดลองส่งตรวจอีกครั้ง`;
+        }
+        const msg = (typeof data?.error === 'string' && data.error.trim()) ? data.error : fallbackMsg;
         throw new Error(msg);
       }
 
-      const data = await res.json();
       if (data.assessment) {
         const newResult: AssessmentResult = data.assessment;
 
-        // Persist to Firestore if user is authenticated
         if (user) {
           try {
             await saveUserSubmission(user.uid, newResult);
@@ -228,7 +357,6 @@ export default function App() {
             console.error('Failed to save submission to Firestore:', fireErr);
           }
         } else {
-          // If guest or not signed in, show subtle prompt
           setSyncNotice('ผลการตรวจพร้อมแล้ว! เข้าสู่ระบบเพื่อบันทึกประวัติถาวร');
           setTimeout(() => setSyncNotice(null), 6000);
         }
@@ -237,6 +365,8 @@ export default function App() {
         setSubmissions((prev) => [newResult, ...prev]);
         setActiveTab('assessment');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        throw new Error('ไม่ได้รับข้อมูลผลการประเมินจากเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง');
       }
     } catch (error: any) {
       console.error('Submission error:', error);
@@ -253,14 +383,25 @@ export default function App() {
   };
 
   const handleOpenLesson = (lessonId: string) => {
+    if (lessonId.startsWith('en-lesson-') && englishWritingEnabled) {
+      setActiveLanguage('en');
+    } else if (!lessonId.startsWith('en-lesson-') && activeLanguage === 'en') {
+      setActiveLanguage('de');
+    }
     setActiveLessonId(lessonId);
     setActiveTab('learning');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSaveToVocabulary = async (word: string, meaning: string, example: string) => {
+    const lang: AppLanguage =
+      activeTab === 'assessment' && currentAssessment?.language
+        ? currentAssessment.language
+        : activeLanguage;
+
     const newItem: VocabularyItem = {
       id: `vocab-${Date.now()}`,
+      language: lang,
       word,
       meaning_th: meaning,
       example_sentence: example,
@@ -270,13 +411,18 @@ export default function App() {
       part_of_speech: 'Noun',
     };
 
-    setVocabulary((prev) => [newItem, ...prev]);
+    if (lang === 'en') {
+      setEnglishVocab((prev) => [newItem, ...prev]);
+    } else {
+      setGermanVocab((prev) => [newItem, ...prev]);
+    }
 
     if (user) {
       try {
         await saveUserVocabulary(user.uid, {
           id: newItem.id,
           userId: user.uid,
+          language: lang,
           word: newItem.word,
           meaning_th: newItem.meaning_th,
           part_of_speech: newItem.part_of_speech,
@@ -291,7 +437,8 @@ export default function App() {
   };
 
   const handleDeleteVocabulary = async (id: string) => {
-    setVocabulary((prev) => prev.filter((v) => v.id !== id));
+    setGermanVocab((prev) => prev.filter((v) => v.id !== id));
+    setEnglishVocab((prev) => prev.filter((v) => v.id !== id));
     if (user) {
       try {
         await deleteUserVocabulary(user.uid, id);
@@ -337,21 +484,54 @@ export default function App() {
       setUser(null);
       setSubmissions([]);
       setCurrentAssessment(null);
+      setAdminPasscodeVerified(false);
+      setEnglishWritingEnabled(false);
+      setActiveLanguage('de');
       setActiveTab('dashboard');
     } catch (err) {
       console.error('Sign out error:', err);
     }
   };
 
+  const handleVerifyAdminPasscode = async (passcode: string) => {
+    if (!user) return { verified: false, error: 'ไม่พบบัญชีผู้ใช้' };
+    const result = await verifyAdminPasscode(user, passcode);
+    if (result.verified) {
+      setAdminPasscodeVerified(true);
+      await loadUserData(user);
+    }
+    return result;
+  };
+
+  const handleAuthSuccess = async () => {
+    const local = getLocalUser();
+    const active = local || auth.currentUser;
+    if (active) {
+      setUser(active);
+      await loadUserData(active);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
-      {/* Top Navigation with Auth Profile */}
+      {/* Top Navigation with Auth Profile, Immutable ID & Admin/EN Toggles */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onNewWriting={() => handleStartWriting()}
         submissionCount={submissions.length}
         user={user}
+        publicId={publicId}
+        isVerifiedAdmin={isVerifiedAdmin}
+        hasEnglishAccess={englishWritingEnabled}
+        activeLanguage={activeLanguage}
+        onChangeLanguage={handleChangeLanguage}
+        onOpenAdminPanel={() => {
+          if (isVerifiedAdmin) {
+            setActiveTab('admin');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
         onOpenAuth={() => setShowAuthModal(true)}
         onSignOut={handleSignOut}
       />
@@ -384,6 +564,7 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <DashboardView
             submissions={submissions}
+            activeLanguage={activeLanguage}
             tasks={tasks}
             onStartWriting={handleStartWriting}
             onStartFreeWriting={() => handleStartWriting(undefined, undefined, 'free')}
@@ -397,6 +578,7 @@ export default function App() {
           <EditorView
             tasks={tasks}
             selectedTask={selectedTask}
+            activeLanguage={activeLanguage}
             initialMode={editorMode}
             onModeChange={setEditorMode}
             onSelectTask={setSelectedTask}
@@ -418,6 +600,7 @@ export default function App() {
         {activeTab === 'learning' && (
           <LearningCenterView
             lessons={lessons}
+            activeLanguage={activeLanguage}
             activeLessonId={activeLessonId}
             onStartWriting={(lvl) => handleStartWriting(undefined, lvl)}
           />
@@ -426,17 +609,24 @@ export default function App() {
         {activeTab === 'vocabulary' && (
           <VocabularyBankView
             vocabulary={vocabulary}
+            activeLanguage={activeLanguage}
             onAddWord={(newItem) => {
               const fullItem: VocabularyItem = {
                 ...newItem,
+                language: activeLanguage,
                 id: `vocab-${Date.now()}`,
                 created_at: new Date().toISOString(),
               };
-              setVocabulary((prev) => [fullItem, ...prev]);
+              if (activeLanguage === 'en') {
+                setEnglishVocab((prev) => [fullItem, ...prev]);
+              } else {
+                setGermanVocab((prev) => [fullItem, ...prev]);
+              }
               if (user) {
                 saveUserVocabulary(user.uid, {
                   id: fullItem.id,
                   userId: user.uid,
+                  language: activeLanguage,
                   word: fullItem.word,
                   meaning_th: fullItem.meaning_th,
                   part_of_speech: fullItem.part_of_speech,
@@ -455,25 +645,66 @@ export default function App() {
         {activeTab === 'history' && (
           <HistoryView
             submissions={submissions}
+            hasEnglishAccess={englishWritingEnabled}
             onViewAssessment={handleViewAssessment}
             onStartNewWriting={() => handleStartWriting()}
             onDeleteSubmission={handleDeleteSubmission}
           />
         )}
 
-        {activeTab === 'rubric' && <RubricView />}
+        {activeTab === 'rubric' && <RubricView activeLanguage={activeLanguage} />}
+
+        {activeTab === 'admin' && isVerifiedAdmin && user && (
+          <AdminPanelView
+            adminEmail={user.email || ADMIN_EMAIL}
+            adminPublicId={publicId}
+            onLoadEntitlements={async () => {
+              const token = getAdminSessionToken(user);
+              if (!token) {
+                return { entitlements: [], directory: [] };
+              }
+              return await adminListEntitlements(token);
+            }}
+            onSetUserEnglishAccess={async (targetPublicId, enabled, note) => {
+              const token = getAdminSessionToken(user);
+              if (!token) {
+                throw new Error('กรุณายืนยันรหัสผ่านแอดมินอีกครั้ง');
+              }
+              const ent = await adminSetUserEnglishAccess(
+                token,
+                user.email || ADMIN_EMAIL,
+                targetPublicId,
+                enabled,
+                note
+              );
+              if (ent.publicId === publicId) {
+                setEnglishWritingEnabled(ent.english_writing_enabled);
+                if (!ent.english_writing_enabled) {
+                  setActiveLanguage('de');
+                }
+              }
+              return ent;
+            }}
+            onUpdatePasscode={async (newPasscode) => {
+              const token = getAdminSessionToken(user);
+              if (!token) {
+                throw new Error('กรุณายืนยันรหัสผ่านแอดมินอีกครั้ง');
+              }
+              await adminUpdatePasscode(token, newPasscode);
+            }}
+            onSwitchToEnglishMode={() => {
+              setEnglishWritingEnabled(true);
+              setActiveLanguage('en');
+              setActiveTab('editor');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
 
         {activeTab === 'auth' && (
           <AuthView
             onSuccess={async () => {
-              const local = getLocalUser();
-              if (local) {
-                setUser(local);
-                await loadUserData(local);
-              } else if (auth.currentUser) {
-                setUser(auth.currentUser);
-                await loadUserData(auth.currentUser);
-              }
+              await handleAuthSuccess();
               setActiveTab('dashboard');
             }}
           />
@@ -485,19 +716,21 @@ export default function App() {
         <AuthView
           isModal={true}
           onSuccess={async () => {
-            const local = getLocalUser();
-            if (local) {
-              setUser(local);
-              await loadUserData(local);
-            } else if (auth.currentUser) {
-              setUser(auth.currentUser);
-              await loadUserData(auth.currentUser);
-            }
+            await handleAuthSuccess();
             setShowAuthModal(false);
           }}
           onCancel={() => {
             setShowAuthModal(false);
           }}
+        />
+      )}
+
+      {/* Blocking Admin Passcode Verification Gate for florian25500@gmail.com */}
+      {user && isAdminUser && !adminPasscodeVerified && (
+        <AdminPasscodeModal
+          adminEmail={user.email || ADMIN_EMAIL}
+          onVerifyPasscode={handleVerifyAdminPasscode}
+          onSignOut={handleSignOut}
         />
       )}
 

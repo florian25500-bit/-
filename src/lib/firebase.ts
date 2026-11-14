@@ -24,8 +24,16 @@ import {
   getDocFromServer
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import type { AssessmentResult } from '../types';
+import type { AppLanguage, AssessmentResult, UserEntitlement } from '../types';
 import { stripUndefinedDeep } from '../utils/assessment-core';
+import {
+  ADMIN_EMAIL,
+  DEFAULT_ADMIN_PASSCODE,
+  generateImmutableUserId,
+  isAdminEmail,
+  isValidPublicUserId,
+  normalizePublicUserId,
+} from '../utils/user-id';
 
 export enum OperationType {
   CREATE = 'create',
@@ -118,6 +126,7 @@ export async function registerWithEmail(email: string, pass: string, displayName
 
 export interface AppUser {
   uid: string;
+  publicId: string;
   email?: string | null;
   displayName?: string | null;
   photoURL?: string | null;
@@ -126,22 +135,69 @@ export interface AppUser {
 }
 
 const LOCAL_USER_KEY = 'deutschschreiben_local_user';
+const LOCAL_USER_ID_MAP_KEY = 'deutschschreiben_immutable_id_map';
+
+/**
+ * Resolves the user's deterministic, immutable public ID (DS-XXXXXXXX).
+ * Once assigned for a uid, it is never regenerated or altered.
+ */
+export function resolvePublicUserId(user: { uid: string; publicId?: string | null } | null | undefined): string {
+  if (!user?.uid) return '';
+  try {
+    const rawMap = localStorage.getItem(LOCAL_USER_ID_MAP_KEY);
+    const idMap: Record<string, string> = rawMap ? JSON.parse(rawMap) : {};
+    const existing = idMap[user.uid];
+    if (existing && isValidPublicUserId(existing)) {
+      return existing;
+    }
+    const assigned =
+      user.publicId && isValidPublicUserId(user.publicId)
+        ? normalizePublicUserId(user.publicId)
+        : generateImmutableUserId(user.uid);
+    idMap[user.uid] = assigned;
+    localStorage.setItem(LOCAL_USER_ID_MAP_KEY, JSON.stringify(idMap));
+    return assigned;
+  } catch {
+    return user.publicId && isValidPublicUserId(user.publicId)
+      ? normalizePublicUserId(user.publicId)
+      : generateImmutableUserId(user.uid);
+  }
+}
 
 export function getLocalUser(): AppUser | null {
   try {
     const raw = localStorage.getItem(LOCAL_USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.uid) return null;
+    const publicId = resolvePublicUserId(parsed);
+    const normalized: AppUser = { ...parsed, publicId };
+    if (parsed.publicId !== publicId) {
+      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(normalized));
+    }
+    return normalized;
   } catch {
     return null;
   }
 }
 
-export function saveLocalUser(user: AppUser): void {
+export function saveLocalUser(user: Omit<AppUser, 'publicId'> & { publicId?: string }): AppUser {
+  const publicId = resolvePublicUserId(user);
+  const fullUser: AppUser = {
+    uid: user.uid,
+    publicId,
+    displayName: user.displayName,
+    email: user.email,
+    photoURL: user.photoURL,
+    isAnonymous: user.isAnonymous,
+    isLocal: user.isLocal,
+  };
   try {
-    localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(user));
+    localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(fullUser));
   } catch (e) {
     console.warn('Could not save local user:', e);
   }
+  return fullUser;
 }
 
 export function clearLocalUser(): void {
@@ -153,37 +209,63 @@ export function clearLocalUser(): void {
 }
 
 export function createInstantProfile(displayName: string, email?: string): AppUser {
-  const newUser: AppUser = {
-    uid: `user-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`,
-    displayName: displayName.trim() || 'ผู้เรียนภาษาเยอรมัน',
-    email: email?.trim() || `${displayName.trim().toLowerCase().replace(/\s+/g, '.') || 'learner'}@deutschschreiben.local`,
+  const trimmedName = displayName.trim() || 'ผู้เรียนภาษาเยอรมัน';
+  const trimmedEmail = email?.trim().toLowerCase();
+  const uid = `user-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
+  const publicId = generateImmutableUserId(uid);
+  const newUser = saveLocalUser({
+    uid,
+    publicId,
+    displayName: trimmedName,
+    email: trimmedEmail || `${trimmedName.toLowerCase().replace(/\s+/g, '.') || 'learner'}@deutschschreiben.local`,
     isAnonymous: false,
     isLocal: true,
-  };
-  saveLocalUser(newUser);
+  });
   return newUser;
 }
 
 export async function loginAsGuest(): Promise<AppUser> {
   try {
     const cred = await signInAnonymously(auth);
-    return cred.user;
+    return saveLocalUser({
+      uid: cred.user.uid,
+      displayName: cred.user.displayName || 'ผู้เรียนทั่วไป (Guest)',
+      email: cred.user.email || 'guest@deutschschreiben.local',
+      photoURL: cred.user.photoURL,
+      isAnonymous: true,
+    });
   } catch (err) {
     console.warn('Firebase anonymous auth unavailable, using persistent local guest profile:', err);
-    const guestUser: AppUser = {
-      uid: `guest-${Date.now().toString(36)}`,
+    const uid = `guest-${Date.now().toString(36)}`;
+    return saveLocalUser({
+      uid,
+      publicId: generateImmutableUserId(uid),
       displayName: 'ผู้เรียนทั่วไป (Guest)',
       email: 'guest@deutschschreiben.local',
       isAnonymous: true,
       isLocal: true,
-    };
-    saveLocalUser(guestUser);
-    return guestUser;
+    });
+  }
+}
+
+function clearAdminSessionTokens(): void {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith('ds_admin_token_')) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+  } catch {
+    // ignore storage restriction
   }
 }
 
 export async function logOut() {
   clearLocalUser();
+  clearAdminSessionTokens();
   try {
     await signOut(auth);
   } catch (e) {
@@ -193,44 +275,380 @@ export async function logOut() {
 
 export { onAuthStateChanged, type FirebaseUser };
 
+async function registerPublicIdOnServer(publicId: string, uid: string, displayName: string): Promise<void> {
+  try {
+    await fetch('/api/users/register-id', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ publicId, uid, displayName }),
+    });
+  } catch {
+    // non-fatal
+  }
+}
+
 // Database Operations
-export async function syncUserProfile(user: AppUser | FirebaseUser) {
+export async function syncUserProfile(user: AppUser | FirebaseUser): Promise<string> {
+  const existingPublicId = (user as AppUser).publicId;
+  const resolvedId = resolvePublicUserId({ uid: user.uid, publicId: existingPublicId });
+
   saveLocalUser({
     uid: user.uid,
+    publicId: resolvedId,
     displayName: user.displayName,
     email: user.email,
     photoURL: user.photoURL,
     isAnonymous: user.isAnonymous,
+    isLocal: (user as AppUser).isLocal,
   });
 
-  if ((user as AppUser).isLocal) return;
+  const safeDisplayName =
+    user.displayName || (user.isAnonymous ? 'ผู้เรียนทั่วไป (Guest)' : 'ผู้เรียนภาษาเยอรมัน');
+  void registerPublicIdOnServer(resolvedId, user.uid, safeDisplayName);
 
-  const userPath = `users/${user.uid}`;
+  if ((user as AppUser).isLocal || !auth.currentUser || auth.currentUser.uid !== user.uid) {
+    return resolvedId;
+  }
+
   try {
     const userDocRef = doc(db, 'users', user.uid);
     const existing = await getDoc(userDocRef);
     const now = new Date().toISOString();
+    let finalPublicId = resolvedId;
+
     if (!existing.exists()) {
       await setDoc(userDocRef, {
         uid: user.uid,
+        publicId: finalPublicId,
         email: user.email || (user.isAnonymous ? 'guest@deutschschreiben.local' : ''),
-        displayName: user.displayName || (user.isAnonymous ? 'ผู้เรียนทั่วไป (Guest)' : 'ผู้เรียนภาษาเยอรมัน'),
+        displayName: safeDisplayName,
         photoURL: user.photoURL || '',
         createdAt: now,
         lastLoginAt: now,
       });
     } else {
+      const storedPublicId = existing.data()?.publicId;
+      if (typeof storedPublicId === 'string' && isValidPublicUserId(storedPublicId)) {
+        finalPublicId = normalizePublicUserId(storedPublicId);
+        // Keep local cache matched to Firestore's immutable ID
+        saveLocalUser({
+          uid: user.uid,
+          publicId: finalPublicId,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          isAnonymous: user.isAnonymous,
+        });
+      }
       await setDoc(
         userDocRef,
         {
+          publicId: finalPublicId,
           lastLoginAt: now,
           displayName: user.displayName || existing.data()?.displayName || 'ผู้เรียนภาษาเยอรมัน',
         },
         { merge: true }
       );
     }
+
+    // Also upsert non-PII public user directory entry for admin ID lookup
+    const dirRef = doc(db, 'user_directory', finalPublicId);
+    const dirSnap = await getDoc(dirRef);
+    await setDoc(
+      dirRef,
+      {
+        publicId: finalPublicId,
+        uid: user.uid,
+        displayName: safeDisplayName,
+        createdAt: dirSnap.exists() ? dirSnap.data()?.createdAt || now : now,
+      },
+      { merge: true }
+    );
+
+    return finalPublicId;
   } catch (err) {
     console.warn('Firestore sync profile skipped (offline or unauthorized):', err);
+    return resolvedId;
+  }
+}
+
+export function getAdminSessionToken(user: { uid: string; email?: string | null } | null): string | null {
+  if (!user?.uid || !isAdminEmail(user.email)) return null;
+  try {
+    return sessionStorage.getItem(`ds_admin_token_${user.uid}`);
+  } catch {
+    return null;
+  }
+}
+
+export function isAdminSessionVerified(user: { uid: string; email?: string | null } | null): boolean {
+  return !!getAdminSessionToken(user);
+}
+
+export async function verifyAdminPasscode(
+  user: { uid: string; email?: string | null },
+  passcode: string
+): Promise<{ verified: boolean; adminToken?: string; error?: string }> {
+  if (!isAdminEmail(user?.email)) {
+    return { verified: false, error: 'บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ' };
+  }
+  const trimmedCode = passcode.trim();
+  if (!trimmedCode) {
+    return { verified: false, error: 'กรุณากรอกรหัสผ่านเฉพาะผู้ดูแลระบบ' };
+  }
+
+  let serverVerified = false;
+  let serverToken = '';
+  let serverError = '';
+
+  try {
+    const res = await fetch('/api/admin/verify-passcode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid: user.uid,
+        email: user.email || ADMIN_EMAIL,
+        passcode: trimmedCode,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.verified && data.adminToken) {
+      serverVerified = true;
+      serverToken = data.adminToken;
+    } else {
+      serverError = data.error || 'รหัสผ่านเฉพาะไม่ถูกต้อง';
+    }
+  } catch {
+    serverError = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อตรวจสอบรหัสผ่านได้';
+  }
+
+  // Also seed/verify against Firestore /admin_settings/gate when Firebase Google Auth is active & verified
+  if (
+    auth.currentUser &&
+    auth.currentUser.uid === user.uid &&
+    auth.currentUser.emailVerified &&
+    isAdminEmail(auth.currentUser.email)
+  ) {
+    try {
+      const gateRef = doc(db, 'admin_settings', 'gate');
+      const gateSnap = await getDoc(gateRef);
+      const now = new Date().toISOString();
+      let dbPasscode = DEFAULT_ADMIN_PASSCODE;
+
+      if (!gateSnap.exists()) {
+        await setDoc(gateRef, {
+          admin_email: ADMIN_EMAIL,
+          passcode: DEFAULT_ADMIN_PASSCODE,
+          updated_at: now,
+        });
+      } else if (typeof gateSnap.data()?.passcode === 'string') {
+        dbPasscode = gateSnap.data()!.passcode;
+      }
+
+      if (trimmedCode !== dbPasscode && !serverVerified) {
+        return { verified: false, error: 'รหัสผ่านเฉพาะไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง' };
+      }
+
+      if (trimmedCode === dbPasscode) {
+        await setDoc(doc(db, 'admins', user.uid), {
+          email: ADMIN_EMAIL,
+          role: 'admin',
+          verifiedAt: now,
+        });
+      }
+    } catch (fireErr) {
+      console.warn('Firestore admin gate sync skipped:', fireErr);
+    }
+  }
+
+  if (!serverVerified) {
+    return { verified: false, error: serverError || 'รหัสผ่านเฉพาะไม่ถูกต้อง' };
+  }
+
+  try {
+    sessionStorage.setItem(`ds_admin_token_${user.uid}`, serverToken);
+  } catch {
+    // ignore storage issues
+  }
+
+  return { verified: true, adminToken: serverToken };
+}
+
+export async function fetchUserEntitlement(publicId: string): Promise<UserEntitlement | null> {
+  if (!publicId || !isValidPublicUserId(publicId)) return null;
+  const normalizedId = normalizePublicUserId(publicId);
+  let serverEnt: UserEntitlement | null = null;
+  let fireEnt: UserEntitlement | null = null;
+
+  try {
+    const res = await fetch(`/api/entitlements/${encodeURIComponent(normalizedId)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.entitlement) {
+        serverEnt = data.entitlement as UserEntitlement;
+      }
+    }
+  } catch {
+    // non-fatal
+  }
+
+  if (auth.currentUser) {
+    try {
+      const snap = await getDoc(doc(db, 'entitlements', normalizedId));
+      if (snap.exists()) {
+        fireEnt = snap.data() as UserEntitlement;
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+
+  if (fireEnt?.english_writing_enabled) return fireEnt;
+  if (serverEnt?.english_writing_enabled) return serverEnt;
+  return fireEnt || serverEnt;
+}
+
+export interface DirectoryUserItem {
+  publicId: string;
+  uid: string;
+  displayName: string;
+  createdAt?: string;
+}
+
+export async function adminListEntitlements(adminToken: string): Promise<{
+  entitlements: UserEntitlement[];
+  directory: DirectoryUserItem[];
+}> {
+  const mergedEnts = new Map<string, UserEntitlement>();
+  const mergedDir = new Map<string, DirectoryUserItem>();
+
+  try {
+    const res = await fetch('/api/admin/entitlements', {
+      headers: { 'x-admin-token': adminToken },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      for (const e of (data.entitlements || []) as UserEntitlement[]) {
+        mergedEnts.set(e.publicId, e);
+      }
+      for (const d of (data.directory || []) as DirectoryUserItem[]) {
+        mergedDir.set(d.publicId, d);
+      }
+    }
+  } catch (err) {
+    console.warn('Server admin entitlements fetch error:', err);
+  }
+
+  if (auth.currentUser && auth.currentUser.emailVerified && isAdminEmail(auth.currentUser.email)) {
+    try {
+      const [entSnap, dirSnap] = await Promise.all([
+        getDocs(collection(db, 'entitlements')),
+        getDocs(collection(db, 'user_directory')),
+      ]);
+      entSnap.forEach((d) => {
+        const data = d.data() as UserEntitlement;
+        if (data?.publicId) {
+          mergedEnts.set(data.publicId, data);
+        }
+      });
+      dirSnap.forEach((d) => {
+        const data = d.data() as DirectoryUserItem;
+        if (data?.publicId) {
+          mergedDir.set(data.publicId, data);
+        }
+      });
+    } catch (err) {
+      console.warn('Firestore admin list skipped:', err);
+    }
+  }
+
+  const entitlements = Array.from(mergedEnts.values()).sort(
+    (a, b) => new Date(b.granted_at || 0).getTime() - new Date(a.granted_at || 0).getTime()
+  );
+  const directory = Array.from(mergedDir.values());
+  return { entitlements, directory };
+}
+
+export async function adminSetUserEnglishAccess(
+  adminToken: string,
+  adminEmail: string,
+  targetPublicId: string,
+  enabled: boolean,
+  note?: string
+): Promise<UserEntitlement> {
+  const normalizedId = normalizePublicUserId(targetPublicId);
+  if (!isValidPublicUserId(normalizedId)) {
+    throw new Error('รูปแบบ User ID ไม่ถูกต้อง (ต้องเป็น DS- ตามด้วยอักษร/ตัวเลข 8 ตัว เช่น DS-7F9A2C1B)');
+  }
+
+  const res = await fetch('/api/admin/entitlements', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-token': adminToken,
+    },
+    body: JSON.stringify({
+      publicId: normalizedId,
+      english_writing_enabled: enabled,
+      note: note?.trim() || '',
+    }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'ไม่สามารถบันทึกสิทธิ์การใช้งานได้');
+  }
+
+  const entitlement = data.entitlement as UserEntitlement;
+
+  if (auth.currentUser && auth.currentUser.emailVerified && isAdminEmail(auth.currentUser.email)) {
+    try {
+      await setDoc(doc(db, 'entitlements', normalizedId), {
+        publicId: normalizedId,
+        english_writing_enabled: enabled,
+        granted_by: adminEmail,
+        granted_at: entitlement.granted_at,
+        ...(note?.trim() ? { note: note.trim() } : { note: '' }),
+      });
+    } catch (err) {
+      console.warn('Firestore entitlement write skipped:', err);
+    }
+  }
+
+  return entitlement;
+}
+
+export async function adminUpdatePasscode(
+  adminToken: string,
+  newPasscode: string
+): Promise<void> {
+  const trimmed = newPasscode.trim();
+  if (trimmed.length < 6) {
+    throw new Error('รหัสผ่านเฉพาะต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+  }
+  const res = await fetch('/api/admin/passcode', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-token': adminToken,
+    },
+    body: JSON.stringify({ passcode: trimmed }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'ไม่สามารถอัปเดตรหัสผ่านเฉพาะได้');
+  }
+
+  if (auth.currentUser && auth.currentUser.emailVerified && isAdminEmail(auth.currentUser.email)) {
+    try {
+      await setDoc(doc(db, 'admin_settings', 'gate'), {
+        admin_email: ADMIN_EMAIL,
+        passcode: trimmed,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Firestore admin passcode update skipped:', err);
+    }
   }
 }
 
@@ -326,6 +744,7 @@ export async function deleteUserSubmission(userId: string, submissionId: string)
 export interface StoredVocabularyItem {
   id: string;
   userId: string;
+  language?: AppLanguage;
   word: string;
   meaning_th: string;
   part_of_speech?: string;

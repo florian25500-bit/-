@@ -10,10 +10,11 @@ import {
   Check,
   ChevronRight,
 } from 'lucide-react';
-import { GrammarLesson, CEFRLevel } from '../types';
+import { GrammarLesson, CEFRLevel, AppLanguage } from '../types';
 
 interface LearningCenterViewProps {
   lessons: GrammarLesson[];
+  activeLanguage?: AppLanguage;
   activeLessonId?: string | null;
   onSelectLesson?: (id: string) => void;
   onStartWriting?: (level?: string) => void;
@@ -36,9 +37,11 @@ const getLevelBadgeStyle = (level: CEFRLevel) => {
 
 export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
   lessons,
+  activeLanguage = 'de',
   activeLessonId,
   onStartWriting,
 }) => {
+  const isEn = activeLanguage === 'en';
   const [selectedId, setSelectedId] = useState<string>(
     activeLessonId || (lessons[0]?.id ?? 'lesson-nebensaetze')
   );
@@ -47,12 +50,16 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
   const [showResults, setShowResults] = useState<boolean>(false);
 
   useEffect(() => {
-    if (activeLessonId) {
+    if (activeLessonId && lessons.some((l) => l.id === activeLessonId)) {
       setSelectedId(activeLessonId);
       setUserAnswers({});
       setShowResults(false);
+    } else if (lessons.length > 0 && !lessons.some((l) => l.id === selectedId)) {
+      setSelectedId(lessons[0].id);
+      setUserAnswers({});
+      setShowResults(false);
     }
-  }, [activeLessonId]);
+  }, [activeLessonId, lessons, selectedId]);
 
   const filteredLessons =
     levelFilter === 'ALL'
@@ -90,13 +97,19 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
       {/* Header Banner */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs">
         <span className="text-xs font-bold uppercase tracking-wider text-blue-700">
-          Deutsches Grammatik- & Schreibzentrum
+          {isEn
+            ? 'English Grammar & Academic Writing Center'
+            : 'Deutsches Grammatik- & Schreibzentrum'}
         </span>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 tracking-tight">
-          คลังความรู้ไวยากรณ์และเทคนิคการเขียนภาษาเยอรมัน (Learning Center)
+          {isEn
+            ? 'คลังความรู้ไวยากรณ์และเทคนิคการเขียนภาษาอังกฤษ (English Learning Center)'
+            : 'คลังความรู้ไวยากรณ์และเทคนิคการเขียนภาษาเยอรมัน (Learning Center)'}
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl leading-relaxed">
-          บทเรียนไวยากรณ์ โครงสร้างย่อหน้า และชุดสำนวนการเขียนระดับ A1–C1 ที่เน้นจุดที่ผู้เรียนชาวไทยมักทำผิดบ่อย พร้อมตัวอย่างเปรียบเทียบถูก-ผิด และแบบฝึกหัดประเมินตนเอง
+          {isEn
+            ? 'บทเรียนไวยากรณ์ การสร้างประโยคเชื่อม โครงสร้างเรียงความ และการเขียนเชิงวิชาการภาษาอังกฤษระดับ A1–C1 พร้อมตัวอย่างเปรียบเทียบถูก-ผิดและแบบฝึกหัด'
+            : 'บทเรียนไวยากรณ์ โครงสร้างย่อหน้า และชุดสำนวนการเขียนระดับ A1–C1 ที่เน้นจุดที่ผู้เรียนชาวไทยมักทำผิดบ่อย พร้อมตัวอย่างเปรียบเทียบถูก-ผิด และแบบฝึกหัดประเมินตนเอง'}
         </p>
       </div>
 
@@ -215,7 +228,7 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
             {/* Thai Detailed Explanation */}
             <div className="space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                คำอธิบายหลักการ (Erklärung):
+                {isEn ? 'คำอธิบายหลักการ (Explanation):' : 'คำอธิบายหลักการ (Erklärung):'}
               </h3>
               <p className="text-sm text-slate-700 leading-relaxed bg-slate-50/70 p-4 rounded-xl border border-slate-200/60 font-sans">
                 {selectedLesson.explanation_th}
@@ -225,7 +238,7 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
             {/* Core Rules Checklist */}
             <div className="space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                กฎสำคัญที่ต้องจำ (Wichtige Regeln):
+                {isEn ? 'กฎสำคัญที่ต้องจำ (Key Rules):' : 'กฎสำคัญที่ต้องจำ (Wichtige Regeln):'}
               </h3>
               <div className="space-y-2">
                 {selectedLesson.rules.map((rule, idx) => (
@@ -244,9 +257,9 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Correct examples */}
               <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4 space-y-3">
-                <h4 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>ตัวอย่างที่ถูกต้อง (Richtig)</span>
+                  <span>{isEn ? 'ตัวอย่างที่ถูกต้อง (Correct)' : 'ตัวอย่างที่ถูกต้อง (Richtig)'}</span>
                 </h4>
                 <div className="space-y-2.5">
                   {selectedLesson.correct_examples.map((ex, i) => (
@@ -271,7 +284,7 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
               <div className="bg-rose-50/50 border border-rose-200 rounded-xl p-4 space-y-3">
                 <h4 className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
                   <XCircle className="w-4 h-4 text-rose-600" />
-                  <span>ข้อผิดพลาดที่พบบ่อย (Falsch & Korrektur)</span>
+                  <span>{isEn ? 'ข้อผิดพลาดที่พบบ่อย (Incorrect & Fix)' : 'ข้อผิดพลาดที่พบบ่อย (Falsch & Korrektur)'}</span>
                 </h4>
                 <div className="space-y-2.5">
                   {selectedLesson.incorrect_examples.map((ex, i) => (
@@ -297,7 +310,7 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                 <div>
                   <h3 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-amber-500" />
-                    <span>แบบฝึกหัดทดสอบความเข้าใจ (Übungsaufgaben)</span>
+                    <span>{isEn ? 'แบบฝึกหัดทดสอบความเข้าใจ (Practice Quiz)' : 'แบบฝึกหัดทดสอบความเข้าใจ (Übungsaufgaben)'}</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     ตอบคำถามด้านล่างเพื่อวัดความเข้าใจในหลักการของบทเรียนนี้

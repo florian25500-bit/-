@@ -1,5 +1,6 @@
 import { Type, Schema } from '@google/genai';
 import {
+  AppLanguage,
   AssessedCEFR,
   AssessmentError,
   AssessmentMode,
@@ -48,6 +49,14 @@ export const VALID_LESSON_IDS = [
   'lesson-verben-praepositionen',
   'lesson-konnektoren-kausal-konzessiv-b2',
   'lesson-c1-kohaesion-argumentation',
+] as const;
+
+export const VALID_ENGLISH_LESSON_IDS = [
+  'en-lesson-svo-tense-a1',
+  'en-lesson-past-connectors-a2',
+  'en-lesson-clauses-conditionals-b1',
+  'en-lesson-academic-connectors-b2',
+  'en-lesson-c1-inversion-hedging',
 ] as const;
 
 export const CEFR_SUBLEVEL_ENUM: ExtendedCEFR[] = ['A1', 'A2', 'A2+', 'B1', 'B1+', 'B2', 'B2+', 'C1', 'C1+'];
@@ -144,8 +153,56 @@ export function stripUndefinedDeep<T>(value: T): T {
   return value;
 }
 
-export function normalizeLessonId(lessonId?: string, topic?: string): string {
+export function normalizeLessonId(
+  lessonId?: string,
+  topic?: string,
+  language: AppLanguage = 'de'
+): string {
   const candidate = (lessonId || '').trim().toLowerCase();
+  if (language === 'en' || candidate.startsWith('en-lesson-')) {
+    if ((VALID_ENGLISH_LESSON_IDS as readonly string[]).includes(candidate)) {
+      return candidate;
+    }
+    const enCombined = `${candidate} ${(topic || '').toLowerCase()}`;
+    if (
+      enCombined.includes('inversion') ||
+      enCombined.includes('hedging') ||
+      enCombined.includes('participle') ||
+      enCombined.includes('c1') ||
+      enCombined.includes('cleft')
+    ) {
+      return 'en-lesson-c1-inversion-hedging';
+    }
+    if (
+      enCombined.includes('however') ||
+      enCombined.includes('semicolon') ||
+      enCombined.includes('comma splice') ||
+      enCombined.includes('cohesion') ||
+      enCombined.includes('connector') ||
+      enCombined.includes('essay') ||
+      enCombined.includes('b2')
+    ) {
+      return 'en-lesson-academic-connectors-b2';
+    }
+    if (
+      enCombined.includes('conditional') ||
+      enCombined.includes('although') ||
+      enCombined.includes('despite') ||
+      enCombined.includes('clause') ||
+      enCombined.includes('b1')
+    ) {
+      return 'en-lesson-clauses-conditionals-b1';
+    }
+    if (
+      enCombined.includes('past') ||
+      enCombined.includes('because') ||
+      enCombined.includes('a2')
+    ) {
+      return 'en-lesson-past-connectors-a2';
+    }
+    return 'en-lesson-svo-tense-a1';
+  }
+
   if ((VALID_LESSON_IDS as readonly string[]).includes(candidate)) {
     return candidate;
   }
@@ -281,13 +338,68 @@ export function isPredominantlyGerman(text: string): { isGerman: boolean; reason
   return { isGerman: true };
 }
 
+const ENGLISH_CORE_WORDS = new Set([
+  'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 'not',
+  'on', 'with', 'he', 'as', 'you', 'do', 'at', 'this', 'but', 'his', 'by', 'from',
+  'they', 'we', 'say', 'her', 'she', 'or', 'an', 'will', 'my', 'one', 'all', 'would',
+  'there', 'their', 'what', 'so', 'up', 'out', 'if', 'about', 'who', 'get', 'which',
+  'go', 'me', 'is', 'are', 'was', 'were', 'has', 'had', 'can', 'could', 'should',
+  'because', 'although', 'however', 'therefore', 'while', 'when', 'where', 'very',
+  'also', 'many', 'more', 'some', 'time', 'people', 'work', 'school', 'dear', 'best'
+]);
+
+/**
+ * English Language Verification Pre-Check (paralleling isPredominantlyGerman)
+ */
+export function isPredominantlyEnglish(text: string): { isEnglish: boolean; reason?: string } {
+  if (!text || typeof text !== 'string') {
+    return { isEnglish: false, reason: 'ไม่พบข้อความงานเขียน' };
+  }
+
+  const clean = text.trim();
+  const words = clean.toLowerCase().match(/[\p{L}\p{N}_\-']+/gu) || [];
+
+  if (words.length < 5) {
+    return {
+      isEnglish: false,
+      reason: 'ข้อความสั้นเกินไปสำหรับการประเมิน (กรุณาเขียนอย่างน้อย 5 คำภาษาอังกฤษ)',
+    };
+  }
+
+  const thaiCharCount = (clean.match(/[\u0E00-\u0E7F]/g) || []).length;
+  if (thaiCharCount > clean.length * 0.25) {
+    return {
+      isEnglish: false,
+      reason: 'ตรวจพบภาษาไทยในสัดส่วนสูง กรุณาเขียนเรียงความด้วยภาษาอังกฤษตามโจทย์',
+    };
+  }
+
+  let englishWordCount = 0;
+  for (const w of words) {
+    if (ENGLISH_CORE_WORDS.has(w)) {
+      englishWordCount++;
+    }
+  }
+
+  if (words.length >= 15 && englishWordCount < 2) {
+    return {
+      isEnglish: false,
+      reason: 'ไม่พบโครงสร้างภาษาอังกฤษ กรุณาตรวจสอบว่าข้อความเขียนด้วยภาษาอังกฤษ',
+    };
+  }
+
+  return { isEnglish: true };
+}
+
 /**
  * 2. Strict ResponseSchema for Gemini (25-point scale for A1-A2, 100-point scale for B1-C1/AUTO)
  */
 export function getAssessmentResponseSchema(
-  level?: CEFRLevel | 'UNSPECIFIED' | 'AUTO' | string | null
+  level?: CEFRLevel | 'UNSPECIFIED' | 'AUTO' | string | null,
+  language: AppLanguage = 'de'
 ): Schema {
   const weights = getRubricWeightsForLevel(level);
+  const validLessons = language === 'en' ? [...VALID_ENGLISH_LESSON_IDS] : [...VALID_LESSON_IDS];
   return {
     type: Type.OBJECT,
     required: [
@@ -537,7 +649,7 @@ export function getAssessmentResponseSchema(
             priority: { type: Type.STRING, enum: ['high', 'medium', 'low'] },
             lesson_id: {
               type: Type.STRING,
-              enum: [...VALID_LESSON_IDS],
+              enum: validLessons,
             },
             reason_th: { type: Type.STRING },
             action_th: { type: Type.STRING },
@@ -1044,7 +1156,8 @@ export function buildGoetheExamVerdict(
   categoryScores: CategoryScoreItem[],
   targetLevel: CEFRLevel | 'UNSPECIFIED',
   assessmentMode: AssessmentMode = 'exam',
-  explicitMaxScore?: number
+  explicitMaxScore?: number,
+  language: AppLanguage = 'de'
 ): GoetheExamVerdict {
   const categoryMaxSum = categoryScores.reduce((acc, c) => acc + (c.max_score || 0), 0);
   const maxScore =
@@ -1094,6 +1207,97 @@ export function buildGoetheExamVerdict(
   const { praedikat_de, praedikat_th, passed } = getGoethePraedikat(computedTotal, maxScore);
   const pointsMargin = computedTotal - passThreshold;
 
+  const combineFeedback = (...parts: (string | undefined)[]) =>
+    parts
+      .map((p) => (p || '').trim())
+      .filter(Boolean)
+      .join(' • ');
+
+  if (language === 'en') {
+    const enExamNameMap: Record<CEFRLevel | 'UNSPECIFIED', string> = {
+      A1: 'CEFR A1 English Writing Assessment (Cambridge Pre-A1 / Movers Scale)',
+      A2: 'CEFR A2 English Writing Assessment (Cambridge A2 Key / KET Standard)',
+      B1: 'CEFR B1 English Writing Assessment (Cambridge B1 Preliminary / PET Standard)',
+      B2: 'CEFR B2 English Writing Assessment (Cambridge B2 First / FCE Standard)',
+      C1: 'CEFR C1 English Writing Assessment (Cambridge C1 Advanced / CAE Standard)',
+      UNSPECIFIED: 'CEFR English Writing Standard Assessment',
+    };
+    const examName = enExamNameMap[targetLevel] || enExamNameMap.UNSPECIFIED;
+    const enSummaryTh = passed
+      ? `ผ่านเกณฑ์ประเมิน ${examName} ด้วยคะแนน ${computedTotal} / ${maxScore} คะแนน (${praedikat_de}) — สูงกว่าเกณฑ์ขั้นต่ำ ${passThreshold} คะแนนอยู่ +${pointsMargin} คะแนน`
+      : `ยังไม่ผ่านเกณฑ์ประเมิน ${examName} ได้คะแนน ${computedTotal} / ${maxScore} คะแนน (${praedikat_de}) — ขาดอีก ${Math.abs(pointsMargin)} คะแนนจึงจะถึงเกณฑ์ผ่าน ${passThreshold} / ${maxScore}`;
+    const enModuleNoteTh =
+      isBasicLevel(targetLevel) || maxScore === TOTAL_MAX_SCORE_A1_A2
+        ? 'เกณฑ์ภาษาอังกฤษระดับ A1–A2: ใช้สัดส่วนคะแนนเต็ม 25 คะแนน (เกณฑ์ผ่าน 15/25 คะแนน หรือ 60%) ตามโมเดลเดียวกับโครงสร้างหลักของแพลตฟอร์ม'
+        : 'เกณฑ์ภาษาอังกฤษระดับ B1–C1 / อิสระ: ใช้สัดส่วนคะแนนเต็ม 100 คะแนน (เกณฑ์ผ่าน 60/100 คะแนน) ครอบคลุม Task Achievement, Coherence, Lexical Resource และ Grammar';
+
+    const enCriteria: GoetheOfficialCriterion[] = [
+      {
+        criterion_de: 'Task Achievement',
+        criterion_th: 'การตอบโจทย์ครบถ้วน เนื้อหา และระดับความสุภาพ (Register)',
+        score: aufgabenScore,
+        max_score: aufgabenMax,
+        percentage: aufgabenMax > 0 ? Math.round((aufgabenScore / aufgabenMax) * 100) : 0,
+        mapped_categories_label: `Task Fulfillment (${taskCat?.score ?? 0}/${taskMax}) + Content (${contentCat?.score ?? 0}/${contentMax}) + Register (${registerCat?.score ?? 0}/${registerMax})`,
+        official_rule_th:
+          'ตรวจความครบถ้วนของประเด็นคำถาม ความชัดเจนของจุดประสงค์การสื่อสาร ระดับความสุภาพ (Formal/Informal) และจำนวนคำที่กำหนด',
+        scored_feedback_th: combineFeedback(
+          taskCat?.feedback_th,
+          contentCat?.feedback_th,
+          registerCat?.feedback_th
+        ),
+      },
+      {
+        criterion_de: 'Coherence & Cohesion',
+        criterion_th: 'โครงสร้างย่อหน้า การลำดับความคิด และคำเชื่อม (Linking Words)',
+        score: kohaerenzScore,
+        max_score: kohaerenzMax,
+        percentage: kohaerenzMax > 0 ? Math.round((kohaerenzScore / kohaerenzMax) * 100) : 0,
+        mapped_categories_label: `Cohesion (${cohesionCat?.score ?? 0}/${cohesionMax})`,
+        official_rule_th:
+          'ตรวจการจัดแบ่งย่อหน้า (Intro-Body-Conclusion) การใช้ Linking Words (however, furthermore, although) และความต่อเนื่องของเนื้อหา',
+        scored_feedback_th: cohesionCat?.feedback_th || '',
+      },
+      {
+        criterion_de: 'Lexical Resource',
+        criterion_th: 'ขอบเขตและความแม่นยำของคำศัพท์และ Collocations',
+        score: wortschatzScore,
+        max_score: wortschatzMax,
+        percentage: wortschatzMax > 0 ? Math.round((wortschatzScore / wortschatzMax) * 100) : 0,
+        mapped_categories_label: `Vocabulary (${vocabCat?.score ?? 0}/${vocabMax})`,
+        official_rule_th:
+          'ตรวจความหลากหลายของคลังคำศัพท์ การเลือกใช้คำร่วมที่เหมาะสม (Collocations) และความแม่นยำตามระดับ CEFR',
+        scored_feedback_th: vocabCat?.feedback_th || '',
+      },
+      {
+        criterion_de: 'Grammatical Range & Accuracy',
+        criterion_th: 'ไวยากรณ์ โครงสร้างประโยค การสะกดคำ และวรรคตอน',
+        score: strukturenScore,
+        max_score: strukturenMax,
+        percentage: strukturenMax > 0 ? Math.round((strukturenScore / strukturenMax) * 100) : 0,
+        mapped_categories_label: `Grammar (${grammarCat?.score ?? 0}/${grammarMax}) + Mechanics (${mechanicsCat?.score ?? 0}/${mechanicsMax})`,
+        official_rule_th:
+          'ตรวจความถูกต้องของ Tenses, Subject-Verb Agreement, Clauses, Punctuation (Comma/Semicolon) และการสะกดคำ',
+        scored_feedback_th: combineFeedback(grammarCat?.feedback_th, mechanicsCat?.feedback_th),
+      },
+    ];
+
+    return {
+      exam_name: examName,
+      target_level: targetLevel,
+      score: computedTotal,
+      max_score: maxScore,
+      pass_threshold: passThreshold,
+      passed,
+      praedikat_de,
+      praedikat_th,
+      points_margin: pointsMargin,
+      summary_th: enSummaryTh,
+      module_note_th: enModuleNoteTh,
+      official_criteria: enCriteria,
+    };
+  }
+
   const examNameMap: Record<CEFRLevel | 'UNSPECIFIED', string> = {
     A1: 'Goethe-Zertifikat A1: Start Deutsch 1 (Schreiben)',
     A2: 'Goethe-Zertifikat A2 (Modul Schreiben)',
@@ -1117,12 +1321,6 @@ export function buildGoetheExamVerdict(
       : isBasicLevel(targetLevel) || maxScore === TOTAL_MAX_SCORE_A1_A2
       ? 'เกณฑ์ทางการ Goethe A1/A2: พาร์ท Schreiben มีคะแนนเต็ม 25 คะแนน (จากคะแนนรวมทั้งฉบับ 100 คะแนน) โดยต้องทำได้ตั้งแต่ 15 / 25 คะแนน (60%) ขึ้นไปจึงถือว่าผ่านเกณฑ์ของพาร์ทนี้'
       : 'เกณฑ์ทางการ Goethe B1–C1: ข้อสอบระบบโมดูล (Modulare Prüfung) แยกตรวจพาร์ท Schreiben เต็ม 100 คะแนน ต้องได้ตั้งแต่ 60 / 100 คะแนนขึ้นไปจึงถือว่าสอบผ่าน (bestanden)';
-
-  const combineFeedback = (...parts: (string | undefined)[]) =>
-    parts
-      .map((p) => (p || '').trim())
-      .filter(Boolean)
-      .join(' • ');
 
   const officialCriteria: GoetheOfficialCriterion[] = [
     {
