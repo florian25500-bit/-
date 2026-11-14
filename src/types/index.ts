@@ -1,6 +1,9 @@
 export type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 export type ExtendedCEFR = 'A1' | 'A2' | 'A2+' | 'B1' | 'B1+' | 'B2' | 'B2+' | 'C1' | 'C1+';
+export type AssessedCEFR = ExtendedCEFR | null;
 export type Grade = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+export type AssessmentMode = 'exam' | 'free';
+export type TargetLevelOption = CEFRLevel | 'AUTO';
 
 export type TaskCategory = 
   | 'E-Mail'
@@ -8,7 +11,23 @@ export type TaskCategory =
   | 'Stellungnahme'
   | 'Erörterung'
   | 'Bericht'
-  | 'Beschwerde';
+  | 'Beschwerde'
+  | 'Freier Text';
+
+export interface AttachedImagePayload {
+  name: string;
+  mimeType: 'image/png' | 'image/jpeg' | 'image/webp';
+  data: string; // base64 string (without data URL prefix) or data URL
+  sizeBytes?: number;
+}
+
+export interface WritingSubmitOptions {
+  mode?: AssessmentMode;
+  customPrompt?: string;
+  targetLevel?: TargetLevelOption;
+  taskCategory?: TaskCategory;
+  attachedImage?: AttachedImagePayload | null;
+}
 
 export interface WritingTask {
   id: string;
@@ -71,13 +90,13 @@ export interface CategoryScoreItem {
 }
 
 export interface CEFRProfile {
-  task_fulfillment: ExtendedCEFR;
-  content_development: ExtendedCEFR;
-  vocabulary: ExtendedCEFR;
-  grammar: ExtendedCEFR;
-  cohesion: ExtendedCEFR;
-  register: ExtendedCEFR;
-  mechanics: ExtendedCEFR;
+  task_fulfillment: AssessedCEFR;
+  content_development: AssessedCEFR;
+  vocabulary: AssessedCEFR;
+  grammar: AssessedCEFR;
+  cohesion: AssessedCEFR;
+  register: AssessedCEFR;
+  mechanics: AssessedCEFR;
 }
 
 export interface WritingVersions {
@@ -101,24 +120,64 @@ export interface RequirementEvaluation {
   comment_th: string;
 }
 
+export type GoethePraedikat =
+  | 'sehr gut'
+  | 'gut'
+  | 'befriedigend'
+  | 'ausreichend'
+  | 'nicht bestanden';
+
+export interface GoetheOfficialCriterion {
+  criterion_de: 'Aufgabenerfüllung' | 'Kohärenz' | 'Wortschatz' | 'Strukturen';
+  criterion_th: string;
+  score: number;
+  max_score: number;
+  percentage: number;
+  mapped_categories_label: string;
+  official_rule_th: string;
+  scored_feedback_th: string;
+}
+
+export interface GoetheExamVerdict {
+  exam_name: string;
+  target_level: CEFRLevel | 'UNSPECIFIED';
+  score: number;
+  max_score?: number;
+  pass_threshold: number;
+  passed: boolean;
+  praedikat_de: GoethePraedikat;
+  praedikat_th: string;
+  points_margin: number;
+  summary_th: string;
+  module_note_th: string;
+  official_criteria: GoetheOfficialCriterion[];
+}
+
 export interface AssessmentResult {
   id: string;
   submission_id: string;
   task_id: string;
   task_title: string;
-  task_level: CEFRLevel;
+  task_level: CEFRLevel | 'UNSPECIFIED';
   task_category: TaskCategory;
+  assessment_mode?: AssessmentMode;
+  custom_prompt?: string;
+  attached_image_name?: string;
+  target_level_option?: TargetLevelOption;
+  transcribed_from_image?: boolean;
   original_text: string;
   word_count: number;
-  total_score: number; // 0 - 100
+  total_score: number; // 0 - 25 (A1-A2) or 0 - 100 (B1-C1)
+  max_total_score?: number; // 25 for A1-A2, 100 for B1-C1/UNSPECIFIED
   grade: Grade;
-  cefr_estimate: ExtendedCEFR;
-  cefr_confidence: 'high' | 'medium' | 'low';
+  cefr_estimate: AssessedCEFR;
+  cefr_confidence: 'high' | 'medium' | 'low' | 'insufficient';
   cefr_summary_th: string;
   main_weakness_th: string;
   main_strength_th: string;
   individual_coaching_note_th?: string;
   requirement_evaluations?: RequirementEvaluation[];
+  goethe_verdict?: GoetheExamVerdict;
   cefr_profile: CEFRProfile;
   category_scores: CategoryScoreItem[];
   errors: AssessmentError[];

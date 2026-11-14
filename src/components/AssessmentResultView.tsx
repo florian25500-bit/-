@@ -17,9 +17,14 @@ import {
   MessageSquareQuote,
   Target,
   XCircle,
+  ShieldCheck,
 } from 'lucide-react';
 import { AssessmentResult, AssessmentError } from '../types';
-import { normalizeLessonId } from '../utils/assessment-core';
+import {
+  buildGoetheExamVerdict,
+  GOETHE_PRAEDIKAT_SCALE,
+  normalizeLessonId,
+} from '../utils/assessment-core';
 
 interface AssessmentResultViewProps {
   assessment: AssessmentResult;
@@ -41,6 +46,15 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
   const [versionTab, setVersionTab] = useState<'corrected' | 'b2_improved' | 'c1_model'>('corrected');
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [savedVocabId, setSavedVocabId] = useState<string | null>(null);
+
+  const goetheVerdict =
+    assessment.goethe_verdict ||
+    buildGoetheExamVerdict(
+      assessment.total_score,
+      assessment.category_scores,
+      assessment.task_level,
+      assessment.assessment_mode || 'exam'
+    );
 
   useEffect(() => {
     setSelectedError(assessment.errors.length > 0 ? assessment.errors[0] : null);
@@ -184,6 +198,29 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               <span className="px-2.5 py-0.5 rounded-md font-bold text-xs bg-blue-50 text-blue-700 border border-blue-200/60">
                 รายงานผลการประเมินวิชาการ (CEFR Assessment Report)
               </span>
+              {assessment.assessment_mode === 'free' && (
+                <span className="px-2 py-0.5 rounded-md font-bold text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  โหมดตรวจอิสระ (Free Writing)
+                </span>
+              )}
+              {assessment.attached_image_name && (
+                <span className="px-2 py-0.5 rounded-md font-semibold text-[11px] bg-sky-50 text-sky-700 border border-sky-200">
+                  แนบรูป: {assessment.attached_image_name}
+                </span>
+              )}
+              <span
+                className={`px-2 py-0.5 rounded-md font-bold text-[11px] border flex items-center gap-1 ${
+                  goetheVerdict.passed
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}
+              >
+                <ShieldCheck className="w-3 h-3" />
+                <span>
+                  Goethe: {goetheVerdict.passed ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์'} ({goetheVerdict.score}/100 •{' '}
+                  {goetheVerdict.praedikat_de})
+                </span>
+              </span>
               {assessment.engine === 'ai' ? (
                 <span className="px-2 py-0.5 rounded-md font-bold text-[11px] bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-purple-600" />
@@ -213,8 +250,18 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
               {assessment.task_title}
             </h1>
             <p className="text-xs text-slate-500">
-              ประเภท: {assessment.task_category} • ระดับเป้าหมาย: Niveau {assessment.task_level} • ความยาว: {assessment.word_count} คำ
+              ประเภท: {assessment.task_category} •{' '}
+              {assessment.task_level === 'UNSPECIFIED'
+                ? 'เกณฑ์ระดับ: ประเมินอิสระ (ไม่กำหนดระดับ)'
+                : `ระดับเป้าหมาย: Niveau ${assessment.task_level}`}{' '}
+              • ความยาว: {assessment.word_count} คำ
+              {assessment.transcribed_from_image ? ' (ถอดความจากรูปภาพ)' : ''}
             </p>
+            {assessment.custom_prompt && (
+              <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200/70 rounded-xl px-3 py-2 mt-2">
+                <span className="font-bold text-slate-800">โจทย์ที่แนบ:</span> {assessment.custom_prompt}
+              </p>
+            )}
           </div>
 
           {/* Key Score Cards */}
@@ -251,17 +298,35 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             </div>
 
             {/* Estimated CEFR Profile */}
-            <div className="bg-blue-50 border border-blue-200/80 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
-              <span className="text-[10px] text-blue-700 uppercase tracking-wider font-bold block">
-                CEFR Estimate
-              </span>
-              <span className="text-2xl font-black block mt-0.5 text-blue-700">
-                {assessment.cefr_estimate}
-              </span>
-              <span className="text-[10px] text-blue-600 font-semibold block">
-                {assessment.cefr_confidence === 'high' ? 'High Confidence' : 'Developing'}
-              </span>
-            </div>
+            {assessment.cefr_estimate ? (
+              <div className="bg-blue-50 border border-blue-200/80 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
+                <span className="text-[10px] text-blue-700 uppercase tracking-wider font-bold block">
+                  CEFR Estimate
+                </span>
+                <span className="text-2xl font-black block mt-0.5 text-blue-700">
+                  {assessment.cefr_estimate}
+                </span>
+                <span className="text-[10px] text-blue-600 font-semibold block">
+                  {assessment.cefr_confidence === 'high'
+                    ? 'High Confidence'
+                    : assessment.cefr_confidence === 'medium'
+                    ? 'Developing'
+                    : 'Low Confidence'}
+                </span>
+              </div>
+            ) : (
+              <div className="bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-center min-w-[130px]">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold block">
+                  CEFR Estimate
+                </span>
+                <span className="text-sm font-extrabold block mt-1.5 text-slate-700">
+                  ไม่ระบุระดับ
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
+                  หลักฐานยังไม่เพียงพอ
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -374,6 +439,189 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Goethe-Institut Certification Verdict & Official Scoring Criteria */}
+          <div
+            className={`rounded-2xl border p-5 sm:p-6 shadow-xs space-y-5 ${
+              goetheVerdict.passed
+                ? 'bg-emerald-50/40 border-emerald-200/90'
+                : 'bg-rose-50/40 border-rose-200/90'
+            }`}
+          >
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200/70 pb-4">
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold border ${
+                      goetheVerdict.passed
+                        ? 'bg-emerald-600 text-white border-emerald-700'
+                        : 'bg-rose-600 text-white border-rose-700'
+                    }`}
+                  >
+                    {goetheVerdict.passed ? (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <XCircle className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {goetheVerdict.passed
+                        ? 'ผ่านเกณฑ์สอบวัดระดับ Goethe (Bestanden)'
+                        : 'ยังไม่ผ่านเกณฑ์สอบวัดระดับ Goethe (Nicht bestanden)'}
+                    </span>
+                  </span>
+
+                  <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-white text-slate-800 border border-slate-200">
+                    ระดับประเมินผล: {goetheVerdict.praedikat_de}
+                  </span>
+                </div>
+
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                  {goetheVerdict.exam_name}
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed">
+                  {goetheVerdict.summary_th}
+                </p>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  {goetheVerdict.module_note_th}
+                </p>
+              </div>
+
+              {/* Exact Pass/Threshold Score Summary Box */}
+              <div className="flex items-center gap-3 shrink-0 bg-white border border-slate-200/90 rounded-xl px-4 py-3">
+                <div className="text-center pr-3 border-r border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    คะแนนที่ได้
+                  </span>
+                  <span
+                    className={`text-2xl font-black ${
+                      goetheVerdict.passed ? 'text-emerald-600' : 'text-rose-600'
+                    }`}
+                  >
+                    {goetheVerdict.score}
+                  </span>
+                  <span className="text-xs text-slate-400"> / 100</span>
+                </div>
+                <div className="text-center pr-3 border-r border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    เกณฑ์ผ่านขั้นต่ำ
+                  </span>
+                  <span className="text-xl font-extrabold text-slate-800">
+                    {goetheVerdict.pass_threshold}
+                  </span>
+                  <span className="text-xs text-slate-400"> / 100</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    ส่วนต่างเกณฑ์ผ่าน
+                  </span>
+                  <span
+                    className={`text-lg font-extrabold ${
+                      goetheVerdict.points_margin >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                    }`}
+                  >
+                    {goetheVerdict.points_margin >= 0
+                      ? `+${goetheVerdict.points_margin}`
+                      : goetheVerdict.points_margin}
+                  </span>
+                  <span className="text-[11px] text-slate-400 block">คะแนน</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Official 4 Goethe Bewertungskriterien Breakdown */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900">
+                  เกณฑ์การตรวจทางการของ Goethe-Institut ที่ใช้ลงคะแนน (Offizielle Bewertungskriterien Schreiben — 100 Punkte)
+                </h3>
+                <span className="text-[11px] text-slate-500">
+                  สรุปคะแนนจริงที่ลงให้ครบทั้ง 4 ด้านทางการ
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {goetheVerdict.official_criteria.map((crit) => (
+                  <div
+                    key={crit.criterion_de}
+                    className="bg-white border border-slate-200/80 rounded-xl p-4 space-y-2 shadow-2xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="font-bold text-xs sm:text-sm text-slate-900 block">
+                          {crit.criterion_de}
+                        </span>
+                        <span className="text-[11px] text-slate-500 block">
+                          {crit.criterion_th}
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-sm font-black text-slate-900">
+                          {crit.score}
+                        </span>
+                        <span className="text-xs text-slate-400"> / {crit.max_score}</span>
+                        <span className="block text-[10px] font-bold text-blue-600">
+                          {crit.percentage}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          crit.percentage >= 80
+                            ? 'bg-emerald-500'
+                            : crit.percentage >= 60
+                            ? 'bg-blue-600'
+                            : 'bg-rose-500'
+                        }`}
+                        style={{ width: `${crit.percentage}%` }}
+                      />
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      <strong className="text-slate-700">เกณฑ์ทางการ:</strong> {crit.official_rule_th}
+                    </p>
+                    <p className="text-[11px] text-blue-700 font-medium">
+                      ผลคะแนนย่อย: {crit.mapped_categories_label}
+                    </p>
+                    {crit.scored_feedback_th && (
+                      <p className="text-xs text-slate-700 bg-slate-50 border border-slate-100 rounded-lg p-2.5 leading-relaxed">
+                        {crit.scored_feedback_th}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Official Goethe Prädikat Scale */}
+            <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 space-y-2">
+              <span className="text-[11px] font-bold text-slate-700 block">
+                ตารางเกณฑ์ตัดสินผลสอบทางการ Goethe-Institut (Prädikate):
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
+                {GOETHE_PRAEDIKAT_SCALE.map((tier) => {
+                  const isActive = tier.praedikat_de === goetheVerdict.praedikat_de;
+                  return (
+                    <div
+                      key={tier.praedikat_de}
+                      className={`p-2 rounded-lg border transition-colors ${
+                        isActive
+                          ? tier.min >= 60
+                            ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400'
+                            : 'bg-rose-50 border-rose-400 text-rose-950 font-bold ring-1 ring-rose-400'
+                          : 'bg-slate-50/70 border-slate-200/70 text-slate-600'
+                      }`}
+                    >
+                      <div className="font-mono font-bold">{tier.range} คะแนน</div>
+                      <div className="font-semibold">{tier.praedikat_de}</div>
+                      <div className="text-[10px] opacity-85">{tier.label_th}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           {/* Individualized AI Examiner Coaching Note */}
           {assessment.individual_coaching_note_th && (
             <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
@@ -581,9 +829,15 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
                   <span className="text-[10px] text-slate-500 font-semibold block uppercase truncate">
                     {skill.replace('_', ' ')}
                   </span>
-                  <span className="text-xl font-black text-blue-600 block mt-1">
-                    {lvl}
-                  </span>
+                  {lvl ? (
+                    <span className="text-xl font-black text-blue-600 block mt-1">
+                      {lvl}
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-slate-400 block mt-2">
+                      ไม่ระบุระดับ
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

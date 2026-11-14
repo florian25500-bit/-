@@ -5,10 +5,16 @@ import {
   validateAndAlignErrors,
   calibrateEvidenceScores,
   calculateMedianCefr,
+  normalizeCefrProfile,
   validateAssessmentPayload,
   normalizeLessonId,
+  validateAttachedImageInput,
+  stripUndefinedDeep,
+  MAX_IMAGE_BYTES,
+  buildGoetheExamVerdict,
+  getGoethePraedikat,
 } from './assessment-core';
-import { WritingTask, CEFRProfile } from '../types';
+import { WritingTask, CEFRProfile, CategoryScoreItem } from '../types';
 
 test('isPredominantlyGerman verifies German and rejects non-German text', () => {
   const german = isPredominantlyGerman(
@@ -63,7 +69,7 @@ test('validateAndAlignErrors computes offsets and discards hallucinated errors',
   assert.equal(text.substring(validated[0].start_offset, validated[0].end_offset), 'weil ich habe keine Zeit');
 });
 
-test('calibrateEvidenceScores caps scores on short texts while preserving individualized AI feedback', () => {
+test('calibrateEvidenceScores caps scores on short exam texts while preserving individualized AI feedback', () => {
   const mockTask: WritingTask = {
     id: 't-test',
     task_id: 'DE-B2-001',
@@ -101,7 +107,7 @@ test('calibrateEvidenceScores caps scores on short texts while preserving indivi
   assert.equal(taskItem?.feedback_th, customTaskFeedback, 'Must preserve individualized AI feedback instead of template');
 });
 
-test('calculateMedianCefr computes true median CEFR from sub-skills', () => {
+test('calculateMedianCefr computes true median CEFR and returns null when undetermined or insufficient', () => {
   const profile: CEFRProfile = {
     task_fulfillment: 'B1',
     content_development: 'B1+',
@@ -112,8 +118,21 @@ test('calculateMedianCefr computes true median CEFR from sub-skills', () => {
     mechanics: 'B2+',
   };
 
-  const median = calculateMedianCefr(profile);
-  assert.equal(median, 'B2');
+  assert.equal(calculateMedianCefr(profile, 80, 0, 'B2'), 'B2');
+  assert.equal(calculateMedianCefr(profile, 8, 0, 'B1'), null, 'Too few words must not guess CEFR level');
+  assert.equal(calculateMedianCefr(profile, 60, 0, 'UNDETERMINED'), null, 'UNDETERMINED from AI must stay null');
+
+  const sparseProfile = normalizeCefrProfile({
+    task_fulfillment: 'UNDETERMINED',
+    content_development: 'UNDETERMINED',
+    vocabulary: 'B1',
+    grammar: 'UNDETERMINED',
+    cohesion: 'UNDETERMINED',
+    register: 'B1',
+    mechanics: 'A2',
+  });
+  assert.equal(sparseProfile.grammar, null);
+  assert.equal(calculateMedianCefr(sparseProfile, 40, 0, 'B1'), null, 'Fewer than 4 rated sub-skills must return null');
 });
 
 test('validateAssessmentPayload rejects incomplete responses and accepts full payloads', () => {
@@ -156,7 +175,7 @@ test('normalizeLessonId maps topics and IDs to valid grammar lesson IDs includin
   assert.equal(normalizeLessonId(undefined, 'Nominalisierung C1'), 'lesson-nominalisierung');
 });
 
-test('calibrateEvidenceScores does not penalize a valid 35-word A1 submission as Unterlänge', () => {
+test('calibrateEvidenceScores does not penalize a valid 35-word A1 submission or Free Writing submission as Unterlänge', () => {
   const a1Task: WritingTask = {
     id: 't-a1-test',
     task_id: 'EXAM-A1-001',
@@ -173,9 +192,19 @@ test('calibrateEvidenceScores does not penalize a valid 35-word A1 submission as
     task_version: '4.0',
   };
 
+  const freeTask: WritingTask = {
+    ...a1Task,
+    id: 'free-writing',
+    task_id: 'FREE-WRITING',
+    category: 'Freier Text',
+    min_words: 0,
+    max_words: 0,
+    requirements: [],
+  };
+
   const rawScores = {
     task_fulfillment: { score: 19, feedback_th: 'ตอบครบทั้ง 3 ประเด็น' },
-    content_development: { score: 13, feedback_th: 'ข้อมูลชัดเจนเหมาะสมกับระดับ A1' },
+    content_development: { score: 13, feedback_th: 'ข้อมูลชัดเจนเหมาะสม' },
     vocabulary: { score: 18, feedback_th: 'ใช้คำศัพท์พื้นฐานได้ถูกต้อง' },
     grammar: { score: 18, feedback_th: 'ผันกริยาและตำแหน่ง V2 ถูกต้อง' },
     cohesion: { score: 13, feedback_th: 'เชื่อมประโยคด้วย und / aber ได้ดี' },
@@ -183,10 +212,91 @@ test('calibrateEvidenceScores does not penalize a valid 35-word A1 submission as
     mechanics: { score: 5, feedback_th: 'สะกดถูกต้อง' },
   };
 
-  const result = calibrateEvidenceScores(rawScores, [], 35, a1Task);
-  assert.equal(result.adjustments.length, 0);
-  assert.equal(result.totalScore, 91);
-  assert.equal(result.grade, 'A');
+  const resultA1 = calibrateEvidenceScores(rawScores, [], 35, a1Task);
+  assert.equal(resultA1.adjustments.length, 0);
+  assert.equal(resultA1.totalScore, 91);
+  assert.equal(resultA1.grade, 'A');
+
+  const resultFree = calibrateEvidenceScores(rawScores, [], 20, freeTask);
+  assert.equal(resultFree.adjustments.length, 0);
+  assert.equal(resultFree.totalScore, 91);
 });
+
+test('validateAttachedImageInput accepts valid PNG/JPEG/WEBP payloads and rejects invalid or oversized inputs', () => {
+  const sampleBase64 = Buffer.from('hello-image-bytes').toString('base64');
+  const validPng = validateAttachedImageInput({
+    name: 'essay.png',
+    mimeType: 'image/png',
+    data: `data:image/png;base64,${sampleBase64}`,
+  });
+  assert.equal(validPng.valid, true);
+  assert.equal(validPng.image?.mimeType, 'image/png');
+  assert.equal(validPng.image?.data, sampleBase64);
+
+  const invalidType = validateAttachedImageInput({
+    name: 'doc.pdf',
+    mimeType: 'application/pdf',
+    data: sampleBase64,
+  });
+  assert.equal(invalidType.valid, false);
+
+  const tooBigBase64 = 'A'.repeat(Math.ceil((MAX_IMAGE_BYTES + 1024) * 4 / 3));
+  const oversized = validateAttachedImageInput({
+    name: 'huge.jpg',
+    mimeType: 'image/jpeg',
+    data: tooBigBase64,
+  });
+  assert.equal(oversized.valid, false);
+});
+
+test('stripUndefinedDeep omits undefined fields safely for Firestore', () => {
+  const cleaned = stripUndefinedDeep({
+    id: '123',
+    custom_prompt: undefined,
+    cefr_estimate: null,
+    nested: { a: 1, b: undefined },
+  });
+  assert.equal('custom_prompt' in cleaned, false);
+  assert.equal(cleaned.cefr_estimate, null);
+  assert.deepEqual(cleaned.nested, { a: 1 });
+});
+
+test('getGoethePraedikat and buildGoetheExamVerdict evaluate pass/fail at 60/100 and map all 4 official criteria', () => {
+  assert.equal(getGoethePraedikat(95).praedikat_de, 'sehr gut');
+  assert.equal(getGoethePraedikat(82).praedikat_de, 'gut');
+  assert.equal(getGoethePraedikat(74).praedikat_de, 'befriedigend');
+  assert.equal(getGoethePraedikat(60).praedikat_de, 'ausreichend');
+  assert.equal(getGoethePraedikat(60).passed, true);
+  assert.equal(getGoethePraedikat(59).praedikat_de, 'nicht bestanden');
+  assert.equal(getGoethePraedikat(59).passed, false);
+
+  const categories: CategoryScoreItem[] = [
+    { category: 'task_fulfillment', label_de: 'Aufgabenbewältigung', label_en: 'Task', score: 15, max_score: 20, feedback_th: 'ครบประเด็น' },
+    { category: 'content_development', label_de: 'Inhalt', label_en: 'Content', score: 10, max_score: 15, feedback_th: 'มีเหตุผล' },
+    { category: 'vocabulary', label_de: 'Wortschatz', label_en: 'Vocabulary', score: 14, max_score: 20, feedback_th: 'คำศัพท์ตรงบริบท' },
+    { category: 'grammar', label_de: 'Grammatik', label_en: 'Grammar', score: 12, max_score: 20, feedback_th: 'V2 ถูกต้อง' },
+    { category: 'cohesion', label_de: 'Kohärenz', label_en: 'Cohesion', score: 10, max_score: 15, feedback_th: 'เชื่อมประโยคดี' },
+    { category: 'register', label_de: 'Register', label_en: 'Register', score: 4, max_score: 5, feedback_th: 'สุภาพเหมาะสม' },
+    { category: 'mechanics', label_de: 'Rechtschreibung', label_en: 'Mechanics', score: 4, max_score: 5, feedback_th: 'สะกดถูก' },
+  ];
+
+  const passVerdict = buildGoetheExamVerdict(69, categories, 'B1', 'exam');
+  assert.equal(passVerdict.passed, true);
+  assert.equal(passVerdict.pass_threshold, 60);
+  assert.equal(passVerdict.points_margin, 9);
+  assert.equal(passVerdict.praedikat_de, 'ausreichend');
+  assert.equal(passVerdict.official_criteria.length, 4);
+  const criteriaSum = passVerdict.official_criteria.reduce((s, c) => s + c.score, 0);
+  const criteriaMax = passVerdict.official_criteria.reduce((s, c) => s + c.max_score, 0);
+  assert.equal(criteriaSum, 69);
+  assert.equal(criteriaMax, 100);
+
+  const failVerdict = buildGoetheExamVerdict(48, categories, 'B2', 'exam');
+  assert.equal(failVerdict.passed, false);
+  assert.equal(failVerdict.points_margin, -12);
+  assert.equal(failVerdict.praedikat_de, 'nicht bestanden');
+});
+
+
 
 

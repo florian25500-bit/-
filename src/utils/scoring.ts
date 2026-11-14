@@ -10,34 +10,81 @@ export const RUBRIC_WEIGHTS = {
   mechanics: 5,
 } as const;
 
+export const RUBRIC_WEIGHTS_A1_A2 = {
+  task_fulfillment: 6,
+  content_development: 3,
+  vocabulary: 5,
+  grammar: 5,
+  cohesion: 3,
+  register: 1,
+  mechanics: 2,
+} as const;
+
+export type RubricWeightMap = {
+  readonly task_fulfillment: number;
+  readonly content_development: number;
+  readonly vocabulary: number;
+  readonly grammar: number;
+  readonly cohesion: number;
+  readonly register: number;
+  readonly mechanics: number;
+};
+
 export const TOTAL_MAX_SCORE = 100;
+export const TOTAL_MAX_SCORE_A1_A2 = 25;
+
+export function isBasicLevel(level?: CEFRLevel | 'UNSPECIFIED' | 'AUTO' | string | null): boolean {
+  return level === 'A1' || level === 'A2';
+}
+
+export function getRubricMaxScoreForLevel(
+  level?: CEFRLevel | 'UNSPECIFIED' | 'AUTO' | string | null
+): 25 | 100 {
+  return isBasicLevel(level) ? TOTAL_MAX_SCORE_A1_A2 : TOTAL_MAX_SCORE;
+}
+
+export function getRubricWeightsForLevel(
+  level?: CEFRLevel | 'UNSPECIFIED' | 'AUTO' | string | null
+): RubricWeightMap {
+  return isBasicLevel(level) ? RUBRIC_WEIGHTS_A1_A2 : RUBRIC_WEIGHTS;
+}
 
 /**
- * Calculates grade based strictly on 100-point rubric
+ * Calculates grade based on percentage of maxScore (supports both 25-point A1-A2 and 100-point B1-C1 rubrics)
  */
-export function calculateGrade(score: number): Grade {
-  const rounded = Math.round(score);
-  if (rounded >= 90) return 'A';
-  if (rounded >= 80) return 'B';
-  if (rounded >= 70) return 'C';
-  if (rounded >= 60) return 'D';
-  if (rounded >= 50) return 'E';
+export function calculateGrade(score: number, maxScore = TOTAL_MAX_SCORE): Grade {
+  const safeMax = maxScore > 0 ? maxScore : TOTAL_MAX_SCORE;
+  const pct = Math.round((score / safeMax) * 100);
+  if (pct >= 90) return 'A';
+  if (pct >= 80) return 'B';
+  if (pct >= 70) return 'C';
+  if (pct >= 60) return 'D';
+  if (pct >= 50) return 'E';
   return 'F';
 }
 
 /**
  * Verifies category scores, caps at max, and calculates sum
  */
-export function calculateTotalScore(categoryScores: CategoryScoreItem[]): {
+export function calculateTotalScore(
+  categoryScores: CategoryScoreItem[],
+  level?: CEFRLevel | 'UNSPECIFIED' | 'AUTO' | string | null
+): {
   total: number;
+  maxTotal: number;
   grade: Grade;
   verifiedScores: CategoryScoreItem[];
 } {
+  const weights = level ? getRubricWeightsForLevel(level) : RUBRIC_WEIGHTS;
   let total = 0;
+  let maxTotal = 0;
   const verifiedScores = categoryScores.map((cat) => {
-    const max = RUBRIC_WEIGHTS[cat.category] || cat.max_score || 20;
+    const max = level
+      ? weights[cat.category]
+      : cat.max_score || RUBRIC_WEIGHTS[cat.category] || 20;
     const clampedScore = Math.max(0, Math.min(cat.score, max));
     total += clampedScore;
+    maxTotal += max;
     return {
       ...cat,
       score: clampedScore,
@@ -45,11 +92,13 @@ export function calculateTotalScore(categoryScores: CategoryScoreItem[]): {
     };
   });
 
+  const effectiveMax = maxTotal > 0 ? maxTotal : getRubricMaxScoreForLevel(level);
   const roundedTotal = Math.round(total * 10) / 10;
-  const grade = calculateGrade(roundedTotal);
+  const grade = calculateGrade(roundedTotal, effectiveMax);
 
   return {
     total: roundedTotal,
+    maxTotal: effectiveMax,
     grade,
     verifiedScores,
   };

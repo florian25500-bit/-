@@ -18,6 +18,7 @@ import { AssessmentResult, WritingTask } from '../types';
 interface DashboardViewProps {
   submissions: AssessmentResult[];
   onStartWriting: (task?: WritingTask) => void;
+  onStartFreeWriting?: () => void;
   onViewAssessment: (result: AssessmentResult) => void;
   onOpenLesson: (lessonId: string) => void;
   onDeleteSubmission: (id: string) => Promise<void> | void;
@@ -27,6 +28,7 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
   submissions,
   onStartWriting,
+  onStartFreeWriting,
   onViewAssessment,
   onOpenLesson,
   onDeleteSubmission,
@@ -106,13 +108,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </p>
           </div>
 
-          <button
-            onClick={() => onStartWriting()}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-5 py-3 rounded-xl shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 cursor-pointer"
-          >
-            <PenLine className="w-4 h-4" />
-            <span>เริ่มทำข้อสอบกลางแบบสุ่ม</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {onStartFreeWriting && (
+              <button
+                type="button"
+                onClick={onStartFreeWriting}
+                className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-semibold text-xs sm:text-sm px-4 py-3 rounded-xl shadow-2xs transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span>ตรวจงานอิสระ / แนบรูป</span>
+              </button>
+            )}
+            <button
+              onClick={() => onStartWriting()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-5 py-3 rounded-xl shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+            >
+              <PenLine className="w-4 h-4" />
+              <span>เริ่มทำข้อสอบกลางแบบสุ่ม</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -122,7 +136,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>ระดับ CEFR ปัจจุบัน</span>
-            {confidence ? (
+            {confidence === 'insufficient' ? (
+              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
+                ไม่ระบุระดับ
+              </span>
+            ) : confidence ? (
               <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-100">
                 {confidence === 'high' ? 'มั่นใจสูง' : 'ระดับเริ่มต้น'}
               </span>
@@ -137,12 +155,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {currentCEFR || '—'}
             </span>
             <span className="text-xs text-slate-500 font-medium">
-              {totalSubmissions > 0 ? 'จากงานล่าสุด' : 'ยังไม่มีข้อมูล'}
+              {totalSubmissions > 0
+                ? currentCEFR
+                  ? 'จากงานล่าสุด'
+                  : 'ไม่ระบุระดับ (ข้อมูลไม่พอ)'
+                : 'ยังไม่มีข้อมูล'}
             </span>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed pt-1">
             {totalSubmissions > 0
-              ? 'คำนวณตามเกณฑ์ Goethe & Telc จากงานเขียนล่าสุดของคุณ'
+              ? currentCEFR
+                ? 'คำนวณตามเกณฑ์ Goethe & Telc จากงานเขียนล่าสุดของคุณ'
+                : 'งานเขียนล่าสุดมีหลักฐานทางภาษาไม่เพียงพอจึงไม่ระบุระดับ CEFR'
               : 'ส่งงานเขียนชิ้นแรกเพื่อเริ่มคำนวณระดับ CEFR'}
           </p>
         </div>
@@ -411,7 +435,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-blue-50 text-blue-700 border border-blue-200/60">
-                        {sub.task_level}
+                        {sub.task_level === 'UNSPECIFIED' ? 'ไม่ระบุ' : sub.task_level}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-600 font-medium">
@@ -434,7 +458,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-blue-600">
-                      {sub.cefr_estimate}
+                      {sub.cefr_estimate || <span className="text-slate-400">ไม่ระบุระดับ</span>}
                     </td>
                     <td
                       className="py-3.5 px-4 text-right"

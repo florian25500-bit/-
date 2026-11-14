@@ -25,6 +25,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import type { AssessmentResult } from '../types';
+import { stripUndefinedDeep } from '../utils/assessment-core';
 
 export enum OperationType {
   CREATE = 'create',
@@ -234,13 +235,15 @@ export async function syncUserProfile(user: AppUser | FirebaseUser) {
 }
 
 export async function saveUserSubmission(userId: string, submission: AssessmentResult): Promise<void> {
+  const cleanSubmission = stripUndefinedDeep(submission);
+
   // Always save locally first so user never loses their assessment
   try {
     const key = `deutschschreiben_subs_${userId}`;
     const raw = localStorage.getItem(key);
     const existing: AssessmentResult[] = raw ? JSON.parse(raw) : [];
-    const filtered = existing.filter((s) => s.id !== submission.id);
-    localStorage.setItem(key, JSON.stringify([submission, ...filtered]));
+    const filtered = existing.filter((s) => s.id !== cleanSubmission.id);
+    localStorage.setItem(key, JSON.stringify([cleanSubmission, ...filtered]));
   } catch (localErr) {
     console.warn('Local submission save error:', localErr);
   }
@@ -248,9 +251,9 @@ export async function saveUserSubmission(userId: string, submission: AssessmentR
   // Attempt Firestore write only if user is logged into Firebase Auth
   if (auth.currentUser && auth.currentUser.uid === userId) {
     try {
-      const docRef = doc(db, 'users', userId, 'submissions', submission.id);
+      const docRef = doc(db, 'users', userId, 'submissions', cleanSubmission.id);
       await setDoc(docRef, {
-        ...submission,
+        ...cleanSubmission,
         userId,
         savedAt: new Date().toISOString(),
       });

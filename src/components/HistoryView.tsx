@@ -166,10 +166,20 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs hover:border-blue-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 <div className="space-y-1.5 max-w-xl">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-blue-50 text-blue-700 border border-blue-200">
-                      Niveau {item.task_level}
+                      {item.task_level === 'UNSPECIFIED' ? 'ไม่ระบุระดับ' : `Niveau ${item.task_level}`}
                     </span>
+                    {item.assessment_mode === 'free' && (
+                      <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ตรวจอิสระ
+                      </span>
+                    )}
+                    {item.attached_image_name && (
+                      <span className="px-2 py-0.5 rounded-md font-semibold text-[10px] bg-sky-50 text-sky-700 border border-sky-200">
+                        แนบรูป
+                      </span>
+                    )}
                     <span className="text-[11px] text-slate-400 font-medium">
                       {item.task_category}
                     </span>
@@ -208,7 +218,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                           : 'bg-amber-50 text-amber-700 border-amber-200'
                       }`}
                     >
-                      Grade {item.grade} • {item.cefr_estimate}
+                      Grade {item.grade} • {item.cefr_estimate || 'ไม่ระบุระดับ'}
                     </span>
                   </div>
 
@@ -312,7 +322,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     {subA.total_score} <span className="text-xs font-normal text-slate-400">/ 100</span>
                   </span>
                   <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                    Grade {subA.grade} ({subA.cefr_estimate})
+                    Grade {subA.grade} ({subA.cefr_estimate || 'ไม่ระบุระดับ'})
                   </span>
                 </div>
                 <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-slate-200/60">
@@ -335,7 +345,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     {subB.total_score} <span className="text-xs font-normal text-slate-400">/ 100</span>
                   </span>
                   <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    Grade {subB.grade} ({subB.cefr_estimate})
+                    Grade {subB.grade} ({subB.cefr_estimate || 'ไม่ระบุระดับ'})
                   </span>
                 </div>
                 <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-slate-200/60">

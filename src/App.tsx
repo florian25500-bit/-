@@ -13,7 +13,14 @@ import { AuthView } from './components/AuthView';
 import { SAMPLE_TASKS } from './data/sampleTasks';
 import { GRAMMAR_LESSONS } from './data/grammarLessons';
 import { INITIAL_VOCABULARY } from './data/sampleVocabulary';
-import { AssessmentResult, WritingTask, VocabularyItem, GrammarLesson } from './types';
+import {
+  AssessmentMode,
+  AssessmentResult,
+  WritingSubmitOptions,
+  WritingTask,
+  VocabularyItem,
+  GrammarLesson,
+} from './types';
 import {
   auth,
   onAuthStateChanged,
@@ -39,6 +46,7 @@ export default function App() {
   const [lessons, setLessons] = useState<GrammarLesson[]>(GRAMMAR_LESSONS);
   const [vocabulary, setVocabulary] = useState<VocabularyItem[]>(INITIAL_VOCABULARY);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  const [editorMode, setEditorMode] = useState<AssessmentMode>('exam');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Authentication states (supports both Firebase Auth and Instant Local Profiles)
@@ -155,26 +163,49 @@ export default function App() {
     setSelectedTask(pool[randomIndex]);
   };
 
-  const handleStartWriting = (task?: WritingTask, levelFilter?: string) => {
+  const handleStartWriting = (
+    task?: WritingTask,
+    levelFilter?: string,
+    mode: AssessmentMode = 'exam'
+  ) => {
+    setEditorMode(mode);
     if (task) {
       setSelectedTask(task);
-    } else {
+    } else if (mode === 'exam') {
       handleRollRandomTask(levelFilter);
     }
     setActiveTab('editor');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmitWriting = async (task: WritingTask, text: string) => {
+  const handleSubmitWriting = async (
+    task: WritingTask,
+    text: string,
+    options?: WritingSubmitOptions
+  ) => {
     setIsSubmitting(true);
     try {
+      const mode = options?.mode || 'exam';
+      const payload: Record<string, any> = {
+        mode,
+        task_id: mode === 'exam' ? task.id : 'free-writing',
+        original_text: text,
+      };
+      if (options?.customPrompt) payload.custom_prompt = options.customPrompt;
+      if (options?.targetLevel) payload.target_level = options.targetLevel;
+      if (options?.taskCategory) payload.task_category = options.taskCategory;
+      if (options?.attachedImage) {
+        payload.attached_image = {
+          name: options.attachedImage.name,
+          mimeType: options.attachedImage.mimeType,
+          data: options.attachedImage.data,
+        };
+      }
+
       const res = await fetch('/api/assess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          task_id: task.id,
-          original_text: text,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -355,6 +386,7 @@ export default function App() {
             submissions={submissions}
             tasks={tasks}
             onStartWriting={handleStartWriting}
+            onStartFreeWriting={() => handleStartWriting(undefined, undefined, 'free')}
             onViewAssessment={handleViewAssessment}
             onOpenLesson={handleOpenLesson}
             onDeleteSubmission={handleDeleteSubmission}
@@ -365,6 +397,8 @@ export default function App() {
           <EditorView
             tasks={tasks}
             selectedTask={selectedTask}
+            initialMode={editorMode}
+            onModeChange={setEditorMode}
             onSelectTask={setSelectedTask}
             onRollRandomTask={handleRollRandomTask}
             onSubmit={handleSubmitWriting}
