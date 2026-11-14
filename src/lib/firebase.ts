@@ -164,6 +164,18 @@ export function resolvePublicUserId(user: { uid: string; publicId?: string | nul
   }
 }
 
+function setCanonicalPublicUserId(uid: string, publicId: string): void {
+  if (!uid || !isValidPublicUserId(publicId)) return;
+  try {
+    const rawMap = localStorage.getItem(LOCAL_USER_ID_MAP_KEY);
+    const idMap: Record<string, string> = rawMap ? JSON.parse(rawMap) : {};
+    idMap[uid] = normalizePublicUserId(publicId);
+    localStorage.setItem(LOCAL_USER_ID_MAP_KEY, JSON.stringify(idMap));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export function getLocalUser(): AppUser | null {
   try {
     const raw = localStorage.getItem(LOCAL_USER_KEY);
@@ -330,7 +342,8 @@ export async function syncUserProfile(user: AppUser | FirebaseUser): Promise<str
       const storedPublicId = existing.data()?.publicId;
       if (typeof storedPublicId === 'string' && isValidPublicUserId(storedPublicId)) {
         finalPublicId = normalizePublicUserId(storedPublicId);
-        // Keep local cache matched to Firestore's immutable ID
+        // Keep local cache and ID map matched to Firestore's canonical immutable ID
+        setCanonicalPublicUserId(user.uid, finalPublicId);
         saveLocalUser({
           uid: user.uid,
           publicId: finalPublicId,
@@ -354,16 +367,18 @@ export async function syncUserProfile(user: AppUser | FirebaseUser): Promise<str
     // Also upsert non-PII public user directory entry for admin ID lookup
     const dirRef = doc(db, 'user_directory', finalPublicId);
     const dirSnap = await getDoc(dirRef);
-    await setDoc(
-      dirRef,
-      {
-        publicId: finalPublicId,
-        uid: user.uid,
-        displayName: safeDisplayName,
-        createdAt: dirSnap.exists() ? dirSnap.data()?.createdAt || now : now,
-      },
-      { merge: true }
-    );
+    if (!dirSnap.exists() || dirSnap.data()?.displayName !== safeDisplayName) {
+      await setDoc(
+        dirRef,
+        {
+          publicId: finalPublicId,
+          uid: user.uid,
+          displayName: safeDisplayName,
+          createdAt: dirSnap.exists() ? dirSnap.data()?.createdAt || now : now,
+        },
+        { merge: true }
+      );
+    }
 
     return finalPublicId;
   } catch (err) {
@@ -437,9 +452,9 @@ export async function verifyAdminPasscode(
 
       if (!gateSnap.exists()) {
         await setDoc(gateRef, {
-          admin_email: ADMIN_EMAIL,
+          adminEmail: ADMIN_EMAIL,
           passcode: DEFAULT_ADMIN_PASSCODE,
-          updated_at: now,
+          updatedAt: now,
         });
       } else if (typeof gateSnap.data()?.passcode === 'string') {
         dbPasscode = gateSnap.data()!.passcode;
@@ -450,11 +465,15 @@ export async function verifyAdminPasscode(
       }
 
       if (trimmedCode === dbPasscode) {
-        await setDoc(doc(db, 'admins', user.uid), {
-          email: ADMIN_EMAIL,
-          role: 'admin',
-          verifiedAt: now,
-        });
+        const adminMarkerRef = doc(db, 'admins', user.uid);
+        const adminMarkerSnap = await getDoc(adminMarkerRef);
+        if (!adminMarkerSnap.exists()) {
+          await setDoc(adminMarkerRef, {
+            uid: user.uid,
+            email: ADMIN_EMAIL,
+            verifiedAt: now,
+          });
+        }
       }
     } catch (fireErr) {
       console.warn('Firestore admin gate sync skipped:', fireErr);
@@ -603,12 +622,14 @@ export async function adminSetUserEnglishAccess(
 
   if (auth.currentUser && auth.currentUser.emailVerified && isAdminEmail(auth.currentUser.email)) {
     try {
+      const now = new Date().toISOString();
       await setDoc(doc(db, 'entitlements', normalizedId), {
         publicId: normalizedId,
         english_writing_enabled: enabled,
         granted_by: adminEmail,
-        granted_at: entitlement.granted_at,
-        ...(note?.trim() ? { note: note.trim() } : { note: '' }),
+        granted_at: entitlement.granted_at || now,
+        updated_at: now,
+        note: note?.trim() || '',
       });
     } catch (err) {
       console.warn('Firestore entitlement write skipped:', err);
@@ -642,9 +663,9 @@ export async function adminUpdatePasscode(
   if (auth.currentUser && auth.currentUser.emailVerified && isAdminEmail(auth.currentUser.email)) {
     try {
       await setDoc(doc(db, 'admin_settings', 'gate'), {
-        admin_email: ADMIN_EMAIL,
+        adminEmail: ADMIN_EMAIL,
         passcode: trimmed,
-        updated_at: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
     } catch (err) {
       console.warn('Firestore admin passcode update skipped:', err);

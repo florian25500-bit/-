@@ -51,6 +51,7 @@ import {
   deleteUserVocabulary,
 } from './lib/firebase';
 import { removeSubmissionFromState } from './utils/submission-helpers';
+import { baseCefrFromExtended } from './utils/assessment-core';
 import { ADMIN_EMAIL, isAdminEmail } from './utils/user-id';
 
 export default function App() {
@@ -88,8 +89,9 @@ export default function App() {
     return Boolean(u && isAdminEmail(u.email) && isAdminSessionVerified(u));
   });
   const [englishWritingEnabled, setEnglishWritingEnabled] = useState<boolean>(false);
+  const [syncedPublicId, setSyncedPublicId] = useState<string>('');
 
-  const publicId = user ? resolvePublicUserId(user) : '';
+  const publicId = user ? syncedPublicId || resolvePublicUserId(user) : '';
   const isAdminUser = Boolean(user && isAdminEmail(user.email));
   const isVerifiedAdmin = isAdminUser && adminPasscodeVerified;
 
@@ -110,6 +112,7 @@ export default function App() {
   const loadUserData = useCallback(async (activeUser: FirebaseUser | AppUser) => {
     try {
       const resolvedId = await syncUserProfile(activeUser);
+      setSyncedPublicId(resolvedId);
       setAdminPasscodeVerified(
         isAdminEmail(activeUser.email) && isAdminSessionVerified(activeUser)
       );
@@ -138,10 +141,10 @@ export default function App() {
         }
       }
 
-      if (userVocab.status === 'fulfilled' && userVocab.value?.length > 0) {
+      if (userVocab.status === 'fulfilled') {
         const mappedDe: VocabularyItem[] = [];
         const mappedEn: VocabularyItem[] = [];
-        userVocab.value.forEach((v) => {
+        (userVocab.value || []).forEach((v) => {
           const item: VocabularyItem = {
             id: v.id,
             language: v.language === 'en' ? 'en' : 'de',
@@ -161,20 +164,10 @@ export default function App() {
           }
         });
 
-        if (mappedDe.length > 0) {
-          setGermanVocab((prev) => {
-            const ids = new Set(prev.map((i) => i.id));
-            const newItems = mappedDe.filter((v) => !ids.has(v.id));
-            return [...newItems, ...prev];
-          });
-        }
-        if (mappedEn.length > 0) {
-          setEnglishVocab((prev) => {
-            const ids = new Set(prev.map((i) => i.id));
-            const newItems = mappedEn.filter((v) => !ids.has(v.id));
-            return [...newItems, ...prev];
-          });
-        }
+        const baseDeIds = new Set(INITIAL_VOCABULARY.map((i) => i.id));
+        const baseEnIds = new Set(ENGLISH_VOCABULARY.map((i) => i.id));
+        setGermanVocab([...mappedDe.filter((v) => !baseDeIds.has(v.id)), ...INITIAL_VOCABULARY]);
+        setEnglishVocab([...mappedEn.filter((v) => !baseEnIds.has(v.id)), ...ENGLISH_VOCABULARY]);
       }
     } catch (err) {
       console.warn('Error loading user data:', err);
@@ -202,8 +195,11 @@ export default function App() {
           await loadUserData(activeLocal);
         } else {
           setUser(null);
+          setSyncedPublicId('');
           setSubmissions([]);
           setCurrentAssessment(null);
+          setGermanVocab(INITIAL_VOCABULARY);
+          setEnglishVocab(ENGLISH_VOCABULARY);
           setAdminPasscodeVerified(false);
           setEnglishWritingEnabled(false);
           setActiveLanguage('de');
@@ -399,6 +395,15 @@ export default function App() {
         ? currentAssessment.language
         : activeLanguage;
 
+    const derivedCefr =
+      activeTab === 'assessment' && currentAssessment
+        ? currentAssessment.cefr_estimate
+          ? baseCefrFromExtended(currentAssessment.cefr_estimate)
+          : currentAssessment.task_level !== 'UNSPECIFIED'
+          ? currentAssessment.task_level
+          : 'B1'
+        : selectedTask.cefr_level;
+
     const newItem: VocabularyItem = {
       id: `vocab-${Date.now()}`,
       language: lang,
@@ -406,7 +411,7 @@ export default function App() {
       meaning_th: meaning,
       example_sentence: example,
       example_translation_th: '',
-      cefr_level: selectedTask.cefr_level,
+      cefr_level: derivedCefr,
       created_at: new Date().toISOString(),
       part_of_speech: 'Noun',
     };
@@ -482,8 +487,11 @@ export default function App() {
     try {
       await logOut();
       setUser(null);
+      setSyncedPublicId('');
       setSubmissions([]);
       setCurrentAssessment(null);
+      setGermanVocab(INITIAL_VOCABULARY);
+      setEnglishVocab(ENGLISH_VOCABULARY);
       setAdminPasscodeVerified(false);
       setEnglishWritingEnabled(false);
       setActiveLanguage('de');
@@ -556,6 +564,7 @@ export default function App() {
         {activeTab === 'landing' && (
           <LandingView
             tasks={tasks}
+            activeLanguage={activeLanguage}
             onStartWriting={handleStartWriting}
             onOpenRubric={() => setActiveTab('rubric')}
           />
@@ -588,14 +597,26 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'assessment' && currentAssessment && (
-          <AssessmentResultView
-            assessment={currentAssessment}
-            onOpenLesson={handleOpenLesson}
-            onSaveToVocabulary={handleSaveToVocabulary}
-            onStartNewWriting={() => handleStartWriting()}
-          />
-        )}
+        {activeTab === 'assessment' &&
+          (currentAssessment ? (
+            <AssessmentResultView
+              assessment={currentAssessment}
+              onOpenLesson={handleOpenLesson}
+              onSaveToVocabulary={handleSaveToVocabulary}
+              onStartNewWriting={() => handleStartWriting()}
+            />
+          ) : (
+            <DashboardView
+              submissions={submissions}
+              activeLanguage={activeLanguage}
+              tasks={tasks}
+              onStartWriting={handleStartWriting}
+              onStartFreeWriting={() => handleStartWriting(undefined, undefined, 'free')}
+              onViewAssessment={handleViewAssessment}
+              onOpenLesson={handleOpenLesson}
+              onDeleteSubmission={handleDeleteSubmission}
+            />
+          ))}
 
         {activeTab === 'learning' && (
           <LearningCenterView
@@ -654,52 +675,64 @@ export default function App() {
 
         {activeTab === 'rubric' && <RubricView activeLanguage={activeLanguage} />}
 
-        {activeTab === 'admin' && isVerifiedAdmin && user && (
-          <AdminPanelView
-            adminEmail={user.email || ADMIN_EMAIL}
-            adminPublicId={publicId}
-            onLoadEntitlements={async () => {
-              const token = getAdminSessionToken(user);
-              if (!token) {
-                return { entitlements: [], directory: [] };
-              }
-              return await adminListEntitlements(token);
-            }}
-            onSetUserEnglishAccess={async (targetPublicId, enabled, note) => {
-              const token = getAdminSessionToken(user);
-              if (!token) {
-                throw new Error('กรุณายืนยันรหัสผ่านแอดมินอีกครั้ง');
-              }
-              const ent = await adminSetUserEnglishAccess(
-                token,
-                user.email || ADMIN_EMAIL,
-                targetPublicId,
-                enabled,
-                note
-              );
-              if (ent.publicId === publicId) {
-                setEnglishWritingEnabled(ent.english_writing_enabled);
-                if (!ent.english_writing_enabled) {
-                  setActiveLanguage('de');
+        {activeTab === 'admin' &&
+          (isVerifiedAdmin && user ? (
+            <AdminPanelView
+              adminEmail={user.email || ADMIN_EMAIL}
+              adminPublicId={publicId}
+              onLoadEntitlements={async () => {
+                const token = getAdminSessionToken(user);
+                if (!token) {
+                  return { entitlements: [], directory: [] };
                 }
-              }
-              return ent;
-            }}
-            onUpdatePasscode={async (newPasscode) => {
-              const token = getAdminSessionToken(user);
-              if (!token) {
-                throw new Error('กรุณายืนยันรหัสผ่านแอดมินอีกครั้ง');
-              }
-              await adminUpdatePasscode(token, newPasscode);
-            }}
-            onSwitchToEnglishMode={() => {
-              setEnglishWritingEnabled(true);
-              setActiveLanguage('en');
-              setActiveTab('editor');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        )}
+                return await adminListEntitlements(token);
+              }}
+              onSetUserEnglishAccess={async (targetPublicId, enabled, note) => {
+                const token = getAdminSessionToken(user);
+                if (!token) {
+                  throw new Error('กรุณายืนยันรหัสผ่านแอดมินอีกครั้ง');
+                }
+                const ent = await adminSetUserEnglishAccess(
+                  token,
+                  user.email || ADMIN_EMAIL,
+                  targetPublicId,
+                  enabled,
+                  note
+                );
+                if (ent.publicId === publicId) {
+                  setEnglishWritingEnabled(ent.english_writing_enabled);
+                  if (!ent.english_writing_enabled) {
+                    setActiveLanguage('de');
+                  }
+                }
+                return ent;
+              }}
+              onUpdatePasscode={async (newPasscode) => {
+                const token = getAdminSessionToken(user);
+                if (!token) {
+                  throw new Error('กรุณายืนยันรหัสผ่านแอดมินอีกครั้ง');
+                }
+                await adminUpdatePasscode(token, newPasscode);
+              }}
+              onSwitchToEnglishMode={() => {
+                setEnglishWritingEnabled(true);
+                setActiveLanguage('en');
+                setActiveTab('editor');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          ) : (
+            <DashboardView
+              submissions={submissions}
+              activeLanguage={activeLanguage}
+              tasks={tasks}
+              onStartWriting={handleStartWriting}
+              onStartFreeWriting={() => handleStartWriting(undefined, undefined, 'free')}
+              onViewAssessment={handleViewAssessment}
+              onOpenLesson={handleOpenLesson}
+              onDeleteSubmission={handleDeleteSubmission}
+            />
+          ))}
 
         {activeTab === 'auth' && (
           <AuthView

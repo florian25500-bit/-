@@ -140,6 +140,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
   useEffect(() => {
     setFreeCategory(isEn ? 'Free Writing' : 'Freier Text');
+    setValidationError(null);
     try {
       setCustomPrompt(localStorage.getItem(freePromptStorageKey) || '');
     } catch {
@@ -830,7 +831,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700">
-                      ประเด็นที่ต้องตอบ (Leitpunkte):
+                      {isEn ? 'ประเด็นที่ต้องตอบ (Key Points):' : 'ประเด็นที่ต้องตอบ (Leitpunkte):'}
                     </span>
                     <span className="text-[11px] text-slate-400">
                       {Object.values(checkedRequirements).filter(Boolean).length} /{' '}
@@ -871,7 +872,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
                       onClick={() => setShowOutline(!showOutline)}
                       className="w-full flex items-center justify-between text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors py-1 cursor-pointer"
                     >
-                      <span>แนวทางการวางโครงสร้าง (Gliederung)</span>
+                      <span>
+                        {isEn ? 'แนวทางการวางโครงสร้าง (Outline)' : 'แนวทางการวางโครงสร้าง (Gliederung)'}
+                      </span>
                       {showOutline ? (
                         <ChevronUp className="w-3.5 h-3.5" />
                       ) : (
@@ -1107,7 +1110,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
                       แนบไฟล์รูปภาพ: {attachedImage.name}
                     </span>
                     <span className="text-[11px] text-blue-700">
-                      AI จะอ่านรูปภาพประกอบการตรวจ (ส่งตรวจได้แม้ไม่พิมพ์ข้อความหากรูปมีงานเขียนภาษาเยอรมัน)
+                      AI จะอ่านรูปภาพประกอบการตรวจ (ส่งตรวจได้แม้ไม่พิมพ์ข้อความหากรูปมีงานเขียน
+                      {isEn ? 'ภาษาอังกฤษ' : 'ภาษาเยอรมัน'})
                     </span>
                   </div>
                 </div>

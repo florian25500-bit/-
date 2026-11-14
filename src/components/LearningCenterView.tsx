@@ -202,7 +202,7 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                       selectedLesson.cefr_level
                     )}`}
                   >
-                    Niveau {selectedLesson.cefr_level}
+                    {isEn ? `CEFR ${selectedLesson.cefr_level}` : `Niveau ${selectedLesson.cefr_level}`}
                   </span>
                   <span className="text-xs text-slate-400 font-mono">
                     {selectedLesson.german_title}
@@ -387,7 +387,15 @@ export const LearningCenterView: React.FC<LearningCenterViewProps> = ({
                             ) : (
                               <XCircle className="w-4 h-4 text-amber-600" />
                             )}
-                            <span>{isCorrect ? 'ถูกต้องแล้ว! (Richtig)' : 'ยังไม่ถูกต้อง (Falsch)'}</span>
+                            <span>
+                              {isEn
+                                ? isCorrect
+                                  ? 'ถูกต้องแล้ว! (Correct)'
+                                  : 'ยังไม่ถูกต้อง (Incorrect)'
+                                : isCorrect
+                                ? 'ถูกต้องแล้ว! (Richtig)'
+                                : 'ยังไม่ถูกต้อง (Falsch)'}
+                            </span>
                           </div>
                           <span>{q.explanation_th}</span>
                         </div>

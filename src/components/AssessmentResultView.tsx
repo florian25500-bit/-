@@ -741,7 +741,8 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
 
                       {reqEval.evidence_quote && (
                         <div className="text-xs bg-white border border-slate-200/80 rounded-lg px-3 py-2 text-slate-700 italic">
-                          หลักฐานจากงานเขียน: „{reqEval.evidence_quote}“
+                          หลักฐานจากงานเขียน:{' '}
+                          {isEn ? `“${reqEval.evidence_quote}”` : `„${reqEval.evidence_quote}“`}
                         </div>
                       )}
 
@@ -760,7 +761,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             <div className="bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-5 space-y-3 shadow-2xs">
               <h3 className="font-bold text-sm text-emerald-900 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>จุดแข็งของงานเขียน (Stärken)</span>
+                <span>{isEn ? 'จุดแข็งของงานเขียน (Strengths)' : 'จุดแข็งของงานเขียน (Stärken)'}</span>
               </h3>
               <ul className="space-y-2 text-xs text-emerald-950">
                 {assessment.strengths.map((str, idx) => (
@@ -775,7 +776,7 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             <div className="bg-amber-50/50 border border-amber-200/80 rounded-2xl p-5 space-y-3 shadow-2xs">
               <h3 className="font-bold text-sm text-amber-900 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <span>จุดที่ควรพัฒนา (Schwächen)</span>
+                <span>{isEn ? 'จุดที่ควรพัฒนา (Areas to Improve)' : 'จุดที่ควรพัฒนา (Schwächen)'}</span>
               </h3>
               <ul className="space-y-2 text-xs text-amber-950">
                 {assessment.weaknesses.map((weak, idx) => (
@@ -793,7 +794,9 @@ export const AssessmentResultView: React.FC<AssessmentResultViewProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  รายละเอียดคะแนนทั้ง 7 หมวด (Kriterienbewertung)
+                  {isEn
+                    ? 'รายละเอียดคะแนนทั้ง 7 หมวด (Criteria Breakdown)'
+                    : 'รายละเอียดคะแนนทั้ง 7 หมวด (Kriterienbewertung)'}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   ประเมินอย่างเป็นกลางตามเกณฑ์ Rubric {maxTotalScore} คะแนนเต็ม

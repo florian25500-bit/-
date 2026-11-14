@@ -49,6 +49,12 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
   const [newTranslation, setNewTranslation] = useState<string>('');
   const [newLevel, setNewLevel] = useState<CEFRLevel>('B2');
 
+  React.useEffect(() => {
+    if (isEn) {
+      setNewArticle('');
+    }
+  }, [isEn]);
+
   const filtered = vocabulary.filter((item) => {
     const matchesLevel = selectedLevel === 'ALL' || item.cefr_level === selectedLevel;
     const matchesPos =
@@ -84,9 +90,10 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
     e.preventDefault();
     if (!newWord || !newMeaning) return;
 
+    const effectiveArticle = !isEn && newArticle ? newArticle : '';
     onAddWord({
-      word: newArticle ? `${newArticle} ${newWord}` : newWord,
-      article: (newArticle || undefined) as any,
+      word: effectiveArticle ? `${effectiveArticle} ${newWord}` : newWord,
+      article: (effectiveArticle || undefined) as any,
       part_of_speech: newPos,
       meaning_th: newMeaning,
       example_sentence: newExample,
@@ -164,7 +171,7 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
               บัตรคำ {cardIndex + 1} จาก {filtered.length}
             </span>
             <span className="px-2.5 py-0.5 rounded-md font-bold bg-blue-50 text-blue-700 border border-blue-200">
-              Niveau {currentFlashcard.cefr_level}
+              {isEn ? `CEFR ${currentFlashcard.cefr_level}` : `Niveau ${currentFlashcard.cefr_level}`}
             </span>
           </div>
 
@@ -196,7 +203,11 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
                 </h4>
                 {currentFlashcard.example_sentence && (
                   <div className="pt-3 border-t border-slate-100 text-xs text-left max-w-md mx-auto space-y-1">
-                    <p className="font-semibold text-slate-800">„{currentFlashcard.example_sentence}“</p>
+                    <p className="font-semibold text-slate-800">
+                      {isEn
+                        ? `“${currentFlashcard.example_sentence}”`
+                        : `„${currentFlashcard.example_sentence}“`}
+                    </p>
                     {currentFlashcard.example_translation_th && (
                       <p className="text-slate-500">{currentFlashcard.example_translation_th}</p>
                     )}
@@ -248,7 +259,11 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ค้นหาคำศัพท์ แท็ก (เช่น Redemittel) หรือตัวอย่าง..."
+              placeholder={
+                isEn
+                  ? 'ค้นหาคำศัพท์ คำเชื่อม (เช่น Contrast, Academic) หรือตัวอย่าง...'
+                  : 'ค้นหาคำศัพท์ แท็ก (เช่น Redemittel) หรือตัวอย่าง...'
+              }
               className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
           </div>
@@ -411,7 +426,7 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onDeleteWord(item.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                      className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
                       title="ลบคำศัพท์นี้"
                       aria-label={`ลบคำว่า ${item.word}`}
                     >
@@ -437,7 +452,7 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
                 {item.example_sentence && (
                   <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-100 text-xs space-y-1">
                     <p className="text-slate-800 leading-relaxed font-sans font-medium">
-                      „{item.example_sentence}“
+                      {isEn ? `“${item.example_sentence}”` : `„${item.example_sentence}“`}
                     </p>
                     {item.example_translation_th && (
                       <p className="text-[11px] text-slate-500">
@@ -522,11 +537,11 @@ export const VocabularyBankView: React.FC<VocabularyBankViewProps> = ({
                     onChange={(e: any) => setNewPos(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50"
                   >
-                    <option value="Noun">คำนาม (Nomen)</option>
-                    <option value="Verb">คำกริยา (Verb)</option>
-                    <option value="Adjective">คำคุณศัพท์ (Adjektiv)</option>
-                    <option value="Connector">คำเชื่อม (Konnektor)</option>
-                    <option value="Adverb">คำกริยาวิเศษณ์ (Adverb)</option>
+                    <option value="Noun">{isEn ? 'คำนาม (Noun)' : 'คำนาม (Nomen)'}</option>
+                    <option value="Verb">{isEn ? 'คำกริยา (Verb)' : 'คำกริยา (Verb)'}</option>
+                    <option value="Adjective">{isEn ? 'คำคุณศัพท์ (Adjective)' : 'คำคุณศัพท์ (Adjektiv)'}</option>
+                    <option value="Connector">{isEn ? 'คำเชื่อม (Linking Word)' : 'คำเชื่อม (Konnektor)'}</option>
+                    <option value="Adverb">{isEn ? 'คำกริยาวิเศษณ์ (Adverb)' : 'คำกริยาวิเศษณ์ (Adverb)'}</option>
                   </select>
                 </div>
 
