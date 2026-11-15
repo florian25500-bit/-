@@ -21,6 +21,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import {
+  AppLanguage,
   AssessmentMode,
   AttachedImagePayload,
   CEFRLevel,
@@ -40,6 +41,7 @@ import { ALLOWED_IMAGE_MIMES, MAX_IMAGE_BYTES } from '../utils/assessment-core';
 interface EditorViewProps {
   tasks: WritingTask[];
   selectedTask: WritingTask;
+  activeLanguage?: AppLanguage;
   initialMode?: AssessmentMode;
   onModeChange?: (mode: AssessmentMode) => void;
   onSelectTask: (task: WritingTask) => void;
@@ -53,10 +55,7 @@ interface LocalAttachedImage extends AttachedImagePayload {
   sizeBytes: number;
 }
 
-const FREE_DRAFT_STORAGE_KEY = 'deutschschreiben_draft_free_writing';
-const FREE_PROMPT_STORAGE_KEY = 'deutschschreiben_free_custom_prompt';
-
-const FREE_CATEGORIES: { id: TaskCategory; label: string }[] = [
+const GERMAN_FREE_CATEGORIES: { id: TaskCategory; label: string }[] = [
   { id: 'Freier Text', label: 'ทั่วไป / อิสระ (Freier Text)' },
   { id: 'E-Mail', label: 'อีเมล (E-Mail)' },
   { id: 'Brief', label: 'จดหมาย (Brief)' },
@@ -64,6 +63,16 @@ const FREE_CATEGORIES: { id: TaskCategory; label: string }[] = [
   { id: 'Erörterung', label: 'เรียงความโต้แย้ง (Erörterung)' },
   { id: 'Bericht', label: 'รายงาน (Bericht)' },
   { id: 'Beschwerde', label: 'ร้องเรียน (Beschwerde)' },
+];
+
+const ENGLISH_FREE_CATEGORIES: { id: TaskCategory; label: string }[] = [
+  { id: 'Free Writing', label: 'ทั่วไป / อิสระ (Free Writing)' },
+  { id: 'Email', label: 'อีเมล (Email)' },
+  { id: 'Formal Letter', label: 'จดหมายทางการ (Formal Letter)' },
+  { id: 'Opinion Essay', label: 'แสดงความคิดเห็น (Opinion Essay)' },
+  { id: 'Argumentative Essay', label: 'เรียงความโต้แย้ง (Argumentative Essay)' },
+  { id: 'Report', label: 'รายงาน (Report)' },
+  { id: 'Complaint Letter', label: 'จดหมายร้องเรียน (Complaint Letter)' },
 ];
 
 const TARGET_LEVEL_OPTIONS: { id: TargetLevelOption; label: string }[] = [
@@ -84,20 +93,29 @@ function formatFileSize(bytes: number): string {
 export const EditorView: React.FC<EditorViewProps> = ({
   tasks,
   selectedTask,
+  activeLanguage = 'de',
   initialMode = 'exam',
   onModeChange,
   onRollRandomTask,
   onSubmit,
   isSubmitting,
 }) => {
+  const isEn = activeLanguage === 'en';
   const [mode, setMode] = useState<AssessmentMode>(initialMode);
 
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
 
+  const freePromptStorageKey = isEn
+    ? 'deutschschreiben_en_free_custom_prompt'
+    : 'deutschschreiben_free_custom_prompt';
   const draftStorageKey =
-    mode === 'free' ? FREE_DRAFT_STORAGE_KEY : `deutschschreiben_draft_${selectedTask.id}`;
+    mode === 'free'
+      ? isEn
+        ? 'deutschschreiben_en_draft_free_writing'
+        : 'deutschschreiben_draft_free_writing'
+      : `deutschschreiben_draft_${selectedTask.id}`;
 
   const [text, setText] = useState<string>(() => {
     try {
@@ -110,13 +128,25 @@ export const EditorView: React.FC<EditorViewProps> = ({
   // Free writing optional settings
   const [customPrompt, setCustomPrompt] = useState<string>(() => {
     try {
-      return localStorage.getItem(FREE_PROMPT_STORAGE_KEY) || '';
+      return localStorage.getItem(freePromptStorageKey) || '';
     } catch {
       return '';
     }
   });
   const [freeTargetLevel, setFreeTargetLevel] = useState<TargetLevelOption>('AUTO');
-  const [freeCategory, setFreeCategory] = useState<TaskCategory>('Freier Text');
+  const [freeCategory, setFreeCategory] = useState<TaskCategory>(
+    isEn ? 'Free Writing' : 'Freier Text'
+  );
+
+  useEffect(() => {
+    setFreeCategory(isEn ? 'Free Writing' : 'Freier Text');
+    setValidationError(null);
+    try {
+      setCustomPrompt(localStorage.getItem(freePromptStorageKey) || '');
+    } catch {
+      setCustomPrompt('');
+    }
+  }, [isEn, freePromptStorageKey]);
 
   // Optional attached image (supported in both modes)
   const [attachedImage, setAttachedImage] = useState<LocalAttachedImage | null>(null);
@@ -206,14 +236,14 @@ export const EditorView: React.FC<EditorViewProps> = ({
     const timer = setTimeout(() => {
       try {
         if (customPrompt.trim()) {
-          localStorage.setItem(FREE_PROMPT_STORAGE_KEY, customPrompt);
+          localStorage.setItem(freePromptStorageKey, customPrompt);
         } else {
-          localStorage.removeItem(FREE_PROMPT_STORAGE_KEY);
+          localStorage.removeItem(freePromptStorageKey);
         }
       } catch {}
     }, 500);
     return () => clearTimeout(timer);
-  }, [customPrompt]);
+  }, [customPrompt, freePromptStorageKey]);
 
   const handleSwitchMode = (nextMode: AssessmentMode) => {
     setMode(nextMode);
@@ -318,28 +348,80 @@ export const EditorView: React.FC<EditorViewProps> = ({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+    const readFileDirectly = () => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+        const commaIdx = dataUrl.indexOf(',');
+        const base64Data = commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : dataUrl;
+        if (!base64Data) {
+          setImageError('ไม่สามารถอ่านข้อมูลไฟล์รูปภาพได้');
+          return;
+        }
+        setAttachedImage({
+          name: file.name,
+          mimeType: normalizedType as LocalAttachedImage['mimeType'],
+          data: base64Data,
+          previewUrl: dataUrl,
+          sizeBytes: file.size,
+        });
+        setValidationError(null);
+      };
+      reader.onerror = () => {
+        setImageError('เกิดข้อผิดพลาดในการอ่านไฟล์รูปภาพ');
+      };
+      reader.readAsDataURL(file);
+    };
+
+    if (file.size <= 600 * 1024) {
+      readFileDirectly();
+      return;
+    }
+
+    // Downscale large images (>600 KB) cleanly so upload + multimodal Gemini inspection never hit proxy size/timeout limits
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const maxDim = 1600;
+      let targetW = img.naturalWidth || img.width;
+      let targetH = img.naturalHeight || img.height;
+      if (targetW > maxDim || targetH > maxDim) {
+        const scale = Math.min(maxDim / targetW, maxDim / targetH);
+        targetW = Math.round(targetW * scale);
+        targetH = Math.round(targetH * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        readFileDirectly();
+        return;
+      }
+      ctx.drawImage(img, 0, 0, targetW, targetH);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
       const commaIdx = dataUrl.indexOf(',');
       const base64Data = commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : dataUrl;
       if (!base64Data) {
-        setImageError('ไม่สามารถอ่านข้อมูลไฟล์รูปภาพได้');
+        readFileDirectly();
         return;
       }
+      const approxBytes = Math.round((base64Data.length * 3) / 4);
       setAttachedImage({
         name: file.name,
-        mimeType: normalizedType as LocalAttachedImage['mimeType'],
+        mimeType: 'image/jpeg',
         data: base64Data,
         previewUrl: dataUrl,
-        sizeBytes: file.size,
+        sizeBytes: approxBytes,
       });
       setValidationError(null);
     };
-    reader.onerror = () => {
-      setImageError('เกิดข้อผิดพลาดในการอ่านไฟล์รูปภาพ');
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      readFileDirectly();
     };
-    reader.readAsDataURL(file);
+    img.src = objectUrl;
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -359,7 +441,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
   const handleSubmit = async () => {
     if (!text.trim() && !attachedImage) {
       setValidationError(
-        isExamMode
+        isEn
+          ? 'กรุณาเขียนข้อความภาษาอังกฤษหรือแนบไฟล์รูปภาพงานเขียนก่อนกดส่งตรวจ'
+          : isExamMode
           ? 'กรุณาเขียนข้อความภาษาเยอรมันหรือแนบไฟล์รูปภาพงานเขียนก่อนกดส่งตรวจ'
           : 'กรุณาพิมพ์ข้อความภาษาเยอรมัน หรือแนบไฟล์รูปภาพงานเขียนก่อนกดส่งตรวจ'
       );
@@ -370,6 +454,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
     try {
       await onSubmit(selectedTask, text, {
         mode,
+        language: activeLanguage,
         customPrompt: mode === 'free' ? customPrompt.trim() : undefined,
         targetLevel: mode === 'free' ? freeTargetLevel : selectedTask.cefr_level,
         taskCategory: mode === 'free' ? freeCategory : selectedTask.category,
@@ -568,9 +653,17 @@ export const EditorView: React.FC<EditorViewProps> = ({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1.5 max-w-2xl">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-600 text-white text-[11px] font-bold shadow-2xs">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-white text-[11px] font-bold shadow-2xs ${
+                    isEn ? 'bg-indigo-600' : 'bg-blue-600'
+                  }`}
+                >
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>ข้อสอบกลางมาตรฐาน (Zentraler Prüfungstest)</span>
+                  <span>
+                    {isEn
+                      ? 'ข้อสอบกลางภาษาอังกฤษ (CEFR English Writing)'
+                      : 'ข้อสอบกลางมาตรฐาน (Zentraler Prüfungstest)'}
+                  </span>
                 </span>
 
                 <span
@@ -578,7 +671,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                     selectedTask.cefr_level
                   )}`}
                 >
-                  Niveau {selectedTask.cefr_level}
+                  {isEn ? `Level ${selectedTask.cefr_level}` : `Niveau ${selectedTask.cefr_level}`}
                 </span>
 
                 <span className="px-2 py-0.5 rounded-md font-semibold text-xs bg-slate-100 text-slate-700 border border-slate-200">
@@ -598,7 +691,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
                 {selectedTask.title}
               </h1>
               <p className="text-xs text-slate-500 leading-relaxed">
-                โจทย์ในการทำข้อสอบเป็นโจทย์กลางมาตรฐานสากล (Goethe/telc) ปรับความยาก จำนวนคำ และประเด็นคำถามตรงตามระดับที่สอบจริง (A1, A2, B1, B2, C1)
+                {isEn
+                  ? 'โจทย์ข้อสอบเขียนภาษาอังกฤษมาตรฐานสากล (Cambridge/CEFR) ปรับความยาก จำนวนคำ และประเด็นคำถามตรงตามระดับที่สอบจริง (A1, A2, B1, B2, C1)'
+                  : 'โจทย์ในการทำข้อสอบเป็นโจทย์กลางมาตรฐานสากล (Goethe/telc) ปรับความยาก จำนวนคำ และประเด็นคำถามตรงตามระดับที่สอบจริง (A1, A2, B1, B2, C1)'}
               </p>
             </div>
 
@@ -645,17 +740,25 @@ export const EditorView: React.FC<EditorViewProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-600 text-white text-[11px] font-bold shadow-2xs">
                 <PenTool className="w-3.5 h-3.5" />
-                <span>ตรวจงานเขียนอิสระ (Freies Schreiben)</span>
+                <span>
+                  {isEn
+                    ? 'ตรวจงานเขียนอิสระ (Free English Writing)'
+                    : 'ตรวจงานเขียนอิสระ (Freies Schreiben)'}
+                </span>
               </span>
               <span className="px-2 py-0.5 rounded-md font-semibold text-xs bg-slate-100 text-slate-700 border border-slate-200">
                 ไม่กำหนดโจทย์ • แนบโจทย์หรือรูปภาพได้ตามต้องการ
               </span>
             </div>
             <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-snug">
-              ส่งตรวจงานเขียนภาษาเยอรมันแบบเปิด (ไม่จำกัดหัวข้อและจำนวนคำ)
+              {isEn
+                ? 'ส่งตรวจงานเขียนภาษาอังกฤษแบบเปิด (ไม่จำกัดหัวข้อและจำนวนคำ)'
+                : 'ส่งตรวจงานเขียนภาษาเยอรมันแบบเปิด (ไม่จำกัดหัวข้อและจำนวนคำ)'}
             </h1>
             <p className="text-xs text-slate-500 leading-relaxed max-w-3xl">
-              วางหรือพิมพ์ข้อความภาษาเยอรมันของคุณได้ทันที หรือเลือกแนบโจทย์ของตนเองและไฟล์รูปภาพ (เช่น ภาพถ่ายโจทย์ กราฟ หรือลายมือเขียน) แบบไม่บังคับ ระบบจะตรวจภาษาและประเมินระดับ CEFR ตามหลักฐานที่ปรากฏจริง
+              {isEn
+                ? 'วางหรือพิมพ์ข้อความภาษาอังกฤษของคุณได้ทันที หรือเลือกแนบโจทย์ของตนเองและไฟล์รูปภาพ (เช่น ภาพถ่ายโจทย์ กราฟ หรือลายมือเขียน) แบบไม่บังคับ ระบบจะตรวจภาษาและประเมินระดับ CEFR ตามหลักฐานที่ปรากฏจริง'
+                : 'วางหรือพิมพ์ข้อความภาษาเยอรมันของคุณได้ทันที หรือเลือกแนบโจทย์ของตนเองและไฟล์รูปภาพ (เช่น ภาพถ่ายโจทย์ กราฟ หรือลายมือเขียน) แบบไม่บังคับ ระบบจะตรวจภาษาและประเมินระดับ CEFR ตามหลักฐานที่ปรากฏจริง'}
             </p>
           </div>
         </div>
@@ -728,7 +831,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700">
-                      ประเด็นที่ต้องตอบ (Leitpunkte):
+                      {isEn ? 'ประเด็นที่ต้องตอบ (Key Points):' : 'ประเด็นที่ต้องตอบ (Leitpunkte):'}
                     </span>
                     <span className="text-[11px] text-slate-400">
                       {Object.values(checkedRequirements).filter(Boolean).length} /{' '}
@@ -769,7 +872,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
                       onClick={() => setShowOutline(!showOutline)}
                       className="w-full flex items-center justify-between text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors py-1 cursor-pointer"
                     >
-                      <span>แนวทางการวางโครงสร้าง (Gliederung)</span>
+                      <span>
+                        {isEn ? 'แนวทางการวางโครงสร้าง (Outline)' : 'แนวทางการวางโครงสร้าง (Gliederung)'}
+                      </span>
                       {showOutline ? (
                         <ChevronUp className="w-3.5 h-3.5" />
                       ) : (
@@ -819,7 +924,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
                       ตัวเลือกเสริม (ไม่บังคับ)
                     </h2>
                     <p className="text-[11px] text-slate-500">
-                      เว้นว่างทั้งหมดเพื่อตรวจภาษาเยอรมันแบบอิสระได้
+                      {isEn
+                        ? 'เว้นว่างทั้งหมดเพื่อตรวจภาษาอังกฤษแบบอิสระได้'
+                        : 'เว้นว่างทั้งหมดเพื่อตรวจภาษาเยอรมันแบบอิสระได้'}
                     </p>
                   </div>
                 </div>
@@ -854,7 +961,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                     aria-label="ประเภทงานเขียน"
                     className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   >
-                    {FREE_CATEGORIES.map((cat) => (
+                    {(isEn ? ENGLISH_FREE_CATEGORIES : GERMAN_FREE_CATEGORIES).map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.label}
                       </option>
@@ -907,23 +1014,42 @@ export const EditorView: React.FC<EditorViewProps> = ({
           <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
             {/* Top Toolbar: Special German Characters & Editing Tools */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-              {/* German Letters Bar */}
-              <div className="flex items-center gap-1 bg-slate-50 p-1.5 rounded-xl border border-slate-200/70">
-                <span className="text-xs text-slate-500 px-1 font-semibold hidden sm:inline">
-                  อักษรเยอรมัน:
-                </span>
-                {['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü'].map((char) => (
-                  <button
-                    key={char}
-                    type="button"
-                    onClick={() => insertGermanChar(char)}
-                    className="w-7 h-7 rounded-lg text-xs font-bold text-slate-800 bg-white hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center border border-slate-200/80 shadow-2xs active:scale-95 cursor-pointer"
-                    title={`แทรกตัวอักษร ${char}`}
-                  >
-                    {char}
-                  </button>
-                ))}
-              </div>
+              {/* Language-specific quick insert bar */}
+              {isEn ? (
+                <div className="flex flex-wrap items-center gap-1 bg-slate-50 p-1.5 rounded-xl border border-slate-200/70">
+                  <span className="text-xs text-slate-500 px-1 font-semibold hidden sm:inline">
+                    ตัวช่วยเขียน EN:
+                  </span>
+                  {['—', ';', 'However, ', 'Furthermore, ', 'Although '].map((token) => (
+                    <button
+                      key={token}
+                      type="button"
+                      onClick={() => insertGermanChar(token)}
+                      className="px-2 h-7 rounded-lg text-[11px] font-bold text-slate-800 bg-white hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center border border-slate-200/80 shadow-2xs active:scale-95 cursor-pointer"
+                      title={`แทรก ${token.trim()}`}
+                    >
+                      {token.trim()}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 bg-slate-50 p-1.5 rounded-xl border border-slate-200/70">
+                  <span className="text-xs text-slate-500 px-1 font-semibold hidden sm:inline">
+                    อักษรเยอรมัน:
+                  </span>
+                  {['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü'].map((char) => (
+                    <button
+                      key={char}
+                      type="button"
+                      onClick={() => insertGermanChar(char)}
+                      className="w-7 h-7 rounded-lg text-xs font-bold text-slate-800 bg-white hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center border border-slate-200/80 shadow-2xs active:scale-95 cursor-pointer"
+                      title={`แทรกตัวอักษร ${char}`}
+                    >
+                      {char}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Tools: Undo / Redo / Sample / Clear */}
               <div className="flex items-center gap-1.5">
@@ -984,7 +1110,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
                       แนบไฟล์รูปภาพ: {attachedImage.name}
                     </span>
                     <span className="text-[11px] text-blue-700">
-                      AI จะอ่านรูปภาพประกอบการตรวจ (ส่งตรวจได้แม้ไม่พิมพ์ข้อความหากรูปมีงานเขียนภาษาเยอรมัน)
+                      AI จะอ่านรูปภาพประกอบการตรวจ (ส่งตรวจได้แม้ไม่พิมพ์ข้อความหากรูปมีงานเขียน
+                      {isEn ? 'ภาษาอังกฤษ' : 'ภาษาเยอรมัน'})
                     </span>
                   </div>
                 </div>
@@ -1005,7 +1132,11 @@ export const EditorView: React.FC<EditorViewProps> = ({
                 value={text}
                 onChange={handleTextChange}
                 placeholder={
-                  isExamMode
+                  isEn
+                    ? isExamMode
+                      ? 'Write your English response here... (เริ่มต้นพิมพ์ข้อความภาษาอังกฤษของคุณที่นี่)'
+                      : 'Write your English text here... (พิมพ์งานเขียนภาษาอังกฤษของคุณที่นี่ หรือแนบรูปภาพงานเขียนในแถบด้านซ้าย)'
+                    : isExamMode
                     ? 'Schreiben Sie hier Ihren Text auf Deutsch... (เริ่มต้นพิมพ์ข้อความภาษาเยอรมันของคุณที่นี่)'
                     : 'Schreiben Sie hier Ihren deutschen Text... (พิมพ์งานเขียนภาษาเยอรมันของคุณที่นี่ หรือแนบรูปภาพงานเขียนลายมือในแถบด้านซ้าย)'
                 }

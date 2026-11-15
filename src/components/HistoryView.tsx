@@ -15,11 +15,12 @@ import {
   ChevronRight,
   Trash2,
 } from 'lucide-react';
-import { AssessmentResult } from '../types';
+import { AppLanguage, AssessmentResult } from '../types';
 import { getAssessmentMaxScore } from '../utils/assessment-core';
 
 interface HistoryViewProps {
   submissions: AssessmentResult[];
+  hasEnglishAccess?: boolean;
   onViewAssessment: (result: AssessmentResult) => void;
   onStartNewWriting: () => void;
   onDeleteSubmission: (id: string) => Promise<void> | void;
@@ -27,12 +28,14 @@ interface HistoryViewProps {
 
 export const HistoryView: React.FC<HistoryViewProps> = ({
   submissions,
+  hasEnglishAccess = false,
   onViewAssessment,
   onStartNewWriting,
   onDeleteSubmission,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('ALL');
+  const [selectedLang, setSelectedLang] = useState<'ALL' | AppLanguage>('ALL');
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -40,10 +43,12 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 
   const filtered = submissions.filter((sub) => {
     const matchesLevel = selectedLevel === 'ALL' || sub.task_level === selectedLevel;
+    const subLang: AppLanguage = sub.language === 'en' ? 'en' : 'de';
+    const matchesLang = selectedLang === 'ALL' || subLang === selectedLang;
     const matchesSearch =
       sub.task_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sub.original_text.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesLevel && matchesSearch;
+    return matchesLevel && matchesLang && matchesSearch;
   });
 
   const toggleCompare = (id: string) => {
@@ -124,6 +129,24 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
+          {(hasEnglishAccess || submissions.some((s) => s.language === 'en')) && (
+            <div className="inline-flex items-center gap-1 mr-1 pr-2 border-r border-slate-200">
+              {(['ALL', 'de', 'en'] as const).map((lng) => (
+                <button
+                  key={lng}
+                  type="button"
+                  onClick={() => setSelectedLang(lng)}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                    selectedLang === lng
+                      ? 'bg-indigo-600 text-white shadow-2xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {lng === 'ALL' ? 'DE+EN' : lng.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
           {['ALL', 'A1', 'A2', 'B1', 'B2', 'C1'].map((lvl) => (
             <button
               key={lvl}
@@ -168,8 +191,15 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
               >
                 <div className="space-y-1.5 max-w-xl">
                   <div className="flex flex-wrap items-center gap-2">
+                    {item.language === 'en' && (
+                      <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        EN
+                      </span>
+                    )}
                     <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-blue-50 text-blue-700 border border-blue-200">
-                      {item.task_level === 'UNSPECIFIED' ? 'ไม่ระบุระดับ' : `Niveau ${item.task_level}`}
+                      {item.task_level === 'UNSPECIFIED'
+                        ? 'ไม่ระบุระดับ'
+                        : `${item.language === 'en' ? 'CEFR ' : 'Niveau '}${item.task_level}`}
                     </span>
                     {item.assessment_mode === 'free' && (
                       <span className="px-2 py-0.5 rounded-md font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">

@@ -41,6 +41,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [instantName, setInstantName] = useState('');
+  const [instantEmail, setInstantEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDomainError, setIsDomainError] = useState(false);
@@ -85,11 +86,11 @@ export const AuthView: React.FC<AuthViewProps> = ({
     }
   };
 
-  const handleInstantProfile = (e: React.FormEvent) => {
+  const handleInstantProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const name = instantName.trim() || 'ผู้เรียนภาษาเยอรมัน';
-    const profile = createInstantProfile(name);
-    syncUserProfile(profile);
+    const profile = createInstantProfile(name, instantEmail.trim() || undefined);
+    await syncUserProfile(profile);
     onSuccess?.();
   };
 
@@ -314,6 +315,22 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 placeholder="เช่น Florian Schmidt หรือ Alex"
                 className="w-full pl-9 pr-3.5 py-2.5 rounded-xl text-xs bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                 autoFocus
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              อีเมล (ไม่บังคับ — Optional Email)
+            </label>
+            <div className="relative">
+              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="email"
+                value={instantEmail}
+                onChange={(e) => setInstantEmail(e.target.value)}
+                placeholder="เช่น name@example.com (เว้นว่างได้)"
+                className="w-full pl-9 pr-3.5 py-2.5 rounded-xl text-xs bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
               />
             </div>
           </div>

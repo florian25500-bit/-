@@ -409,6 +409,67 @@ test('INITIAL_VOCABULARY has expanded connector bank and unique IDs, and GRAMMAR
   }
 });
 
+import { isPredominantlyEnglish, VALID_ENGLISH_LESSON_IDS } from './assessment-core';
+import { ENGLISH_EXAM_PROMPTS_POOL } from '../data/englishExamPromptsPool';
+import { ENGLISH_GRAMMAR_LESSONS } from '../data/englishGrammarLessons';
+import { ENGLISH_VOCABULARY } from '../data/englishVocabulary';
+
+test('English writing mode datasets, language verification, lesson normalization, and CEFR verdicts work end-to-end', () => {
+  // Pool integrity
+  assert.ok(ENGLISH_EXAM_PROMPTS_POOL.length >= 15, 'English exam pool should cover A1-C1');
+  for (const t of ENGLISH_EXAM_PROMPTS_POOL) {
+    assert.equal(t.language, 'en');
+  }
+  assert.equal(ENGLISH_GRAMMAR_LESSONS.length, VALID_ENGLISH_LESSON_IDS.length);
+  for (const l of ENGLISH_GRAMMAR_LESSONS) {
+    assert.ok(
+      (VALID_ENGLISH_LESSON_IDS as readonly string[]).includes(l.id),
+      `English lesson ID ${l.id} must be in VALID_ENGLISH_LESSON_IDS`
+    );
+  }
+  assert.ok(ENGLISH_VOCABULARY.length >= 15);
+  assert.ok(ENGLISH_VOCABULARY.some((v) => v.part_of_speech === 'Connector'));
+
+  // Language verification
+  assert.equal(
+    isPredominantlyEnglish('Dear Sarah, I am writing to invite you to my birthday party on Saturday at my house.').isEnglish,
+    true
+  );
+  assert.equal(
+    isPredominantlyEnglish('นี่คือข้อความภาษาไทยสำหรับการทดสอบระบบภาษาอังกฤษ').isEnglish,
+    false
+  );
+
+  // Lesson normalization for 'en'
+  assert.equal(normalizeLessonId(undefined, 'Although vs Despite conditionals', 'en'), 'en-lesson-clauses-conditionals-b1');
+  assert.equal(normalizeLessonId(undefined, 'However semicolon academic essay', 'en'), 'en-lesson-academic-connectors-b2');
+  assert.equal(normalizeLessonId(undefined, 'Inversion and hedging C1', 'en'), 'en-lesson-c1-inversion-hedging');
+
+  // English 25-point (A2) and 100-point (B2) verdicts
+  const categoriesA2: CategoryScoreItem[] = [
+    { category: 'task_fulfillment', label_de: 'Aufgabenbewältigung', label_en: 'Task Fulfillment', score: 5, max_score: 6, feedback_th: 'ตอบครบ' },
+    { category: 'content_development', label_de: 'Inhalt', label_en: 'Content', score: 3, max_score: 3, feedback_th: 'ชัดเจน' },
+    { category: 'vocabulary', label_de: 'Wortschatz', label_en: 'Vocabulary', score: 4, max_score: 5, feedback_th: 'เหมาะสม' },
+    { category: 'grammar', label_de: 'Grammatik', label_en: 'Grammar', score: 4, max_score: 5, feedback_th: 'ถูกต้อง' },
+    { category: 'cohesion', label_de: 'Kohärenz', label_en: 'Cohesion', score: 2, max_score: 3, feedback_th: 'เชื่อมได้ดี' },
+    { category: 'register', label_de: 'Register', label_en: 'Register', score: 1, max_score: 1, feedback_th: 'สุภาพ' },
+    { category: 'mechanics', label_de: 'Rechtschreibung', label_en: 'Mechanics', score: 2, max_score: 2, feedback_th: 'สะกดถูก' },
+  ];
+  const enA2Verdict = buildGoetheExamVerdict(21, categoriesA2, 'A2', 'exam', 25, 'en');
+  assert.equal(enA2Verdict.max_score, 25);
+  assert.equal(enA2Verdict.pass_threshold, 15);
+  assert.equal(enA2Verdict.passed, true);
+  assert.equal(enA2Verdict.official_criteria[0].criterion_de, 'Task Achievement');
+  assert.equal(enA2Verdict.official_criteria[3].criterion_de, 'Grammatical Range & Accuracy');
+
+  const schemaEnB2 = getAssessmentResponseSchema('B2', 'en') as any;
+  assert.deepEqual(
+    schemaEnB2.properties.learning_recommendations.items.properties.lesson_id.enum,
+    [...VALID_ENGLISH_LESSON_IDS]
+  );
+});
+
+
 
 
 

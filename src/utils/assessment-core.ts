@@ -1,4 +1,13 @@
-import { Type, Schema } from '@google/genai';
+import type { Schema } from '@google/genai';
+
+const Type = {
+  OBJECT: 'OBJECT',
+  STRING: 'STRING',
+  NUMBER: 'NUMBER',
+  INTEGER: 'INTEGER',
+  BOOLEAN: 'BOOLEAN',
+  ARRAY: 'ARRAY',
+} as any;
 import {
   AssessedCEFR,
   AssessmentError,

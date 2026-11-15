@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "deutschschreiben-ai",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Optional: Bind a Cloudflare KV namespace to persist custom vocabulary & AI-generated tasks globally:
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "DEUTSCHSCHREIBEN_KV",
+  //     "id": "<YOUR_KV_NAMESPACE_ID>"
+  //   }
+  // ]
+}

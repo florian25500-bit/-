@@ -8,8 +8,12 @@
     "start": "tsx server.ts",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "clean": "rm -rf dist server.js .wrangler",
+    "lint": "tsc --noEmit",
+    "cf:dev": "npm run build && wrangler dev",
+    "cf:check": "npm run build && wrangler deploy --dry-run --outdir=.wrangler/dry-run",
+    "cf:deploy": "npm run build && wrangler deploy",
+    "cf:pages:deploy": "npm run build && wrangler pages deploy dist --project-name=deutschschreiben-ai"
   },
   "dependencies": {
     "@google/genai": "^3.3.0",
@@ -25,6 +29,8 @@
     "vite": "^8.3.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261115.1",
+    "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -33,6 +39,6 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2",
-    "@types/express": "^4.17.21"
+    "wrangler": "^4.162.0"
   }
 }

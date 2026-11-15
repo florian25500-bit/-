@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { RUBRIC_WEIGHTS, RUBRIC_WEIGHTS_A1_A2 } from '../utils/scoring';
+import { AppLanguage } from '../types';
 
 type RubricTier = 'A1_A2' | 'B1_C1';
 
-export const RubricView: React.FC = () => {
+interface RubricViewProps {
+  activeLanguage?: AppLanguage;
+}
+
+export const RubricView: React.FC<RubricViewProps> = ({ activeLanguage = 'de' }) => {
+  const isEn = activeLanguage === 'en';
   const [selectedTier, setSelectedTier] = useState<RubricTier>('A1_A2');
   const isBasic = selectedTier === 'A1_A2';
   const weights = isBasic ? RUBRIC_WEIGHTS_A1_A2 : RUBRIC_WEIGHTS;
@@ -13,48 +19,75 @@ export const RubricView: React.FC = () => {
 
   const gradeScale = isBasic
     ? [
-        { grade: 'Grade A', range: '23–25 คะแนน', label: 'ยอดเยี่ยม (Sehr gut)', box: 'bg-emerald-50 border-emerald-200', title: 'text-emerald-700', sub: 'text-emerald-800' },
-        { grade: 'Grade B', range: '20–22 คะแนน', label: 'ดีมาก (Gut)', box: 'bg-blue-50 border-blue-200', title: 'text-blue-700', sub: 'text-blue-800' },
-        { grade: 'Grade C', range: '18–19 คะแนน', label: 'น่าพอใจ (Befriedigend)', box: 'bg-indigo-50 border-indigo-200', title: 'text-indigo-700', sub: 'text-indigo-800' },
-        { grade: 'Grade D', range: '15–17 คะแนน', label: 'พอใช้/ผ่าน (Ausreichend)', box: 'bg-amber-50 border-amber-200', title: 'text-amber-700', sub: 'text-amber-800' },
-        { grade: 'Grade E', range: '13–14 คะแนน', label: 'ต้องพัฒนา (Mangelhaft)', box: 'bg-orange-50 border-orange-200', title: 'text-orange-700', sub: 'text-orange-800' },
-        { grade: 'Grade F', range: '0–12 คะแนน', label: 'ไม่ผ่านเกณฑ์ (Ungenügend)', box: 'bg-rose-50 border-rose-200', title: 'text-rose-700', sub: 'text-rose-800' },
+        { grade: 'Grade A', range: '23–25 คะแนน', label: isEn ? 'ยอดเยี่ยม (Distinction)' : 'ยอดเยี่ยม (Sehr gut)', box: 'bg-emerald-50 border-emerald-200', title: 'text-emerald-700', sub: 'text-emerald-800' },
+        { grade: 'Grade B', range: '20–22 คะแนน', label: isEn ? 'ดีมาก (Merit)' : 'ดีมาก (Gut)', box: 'bg-blue-50 border-blue-200', title: 'text-blue-700', sub: 'text-blue-800' },
+        { grade: 'Grade C', range: '18–19 คะแนน', label: isEn ? 'น่าพอใจ (Solid Pass)' : 'น่าพอใจ (Befriedigend)', box: 'bg-indigo-50 border-indigo-200', title: 'text-indigo-700', sub: 'text-indigo-800' },
+        { grade: 'Grade D', range: '15–17 คะแนน', label: isEn ? 'พอใช้/ผ่าน (Pass)' : 'พอใช้/ผ่าน (Ausreichend)', box: 'bg-amber-50 border-amber-200', title: 'text-amber-700', sub: 'text-amber-800' },
+        { grade: 'Grade E', range: '13–14 คะแนน', label: isEn ? 'ต้องพัฒนา (Below Pass)' : 'ต้องพัฒนา (Mangelhaft)', box: 'bg-orange-50 border-orange-200', title: 'text-orange-700', sub: 'text-orange-800' },
+        { grade: 'Grade F', range: '0–12 คะแนน', label: isEn ? 'ไม่ผ่านเกณฑ์ (Fail)' : 'ไม่ผ่านเกณฑ์ (Ungenügend)', box: 'bg-rose-50 border-rose-200', title: 'text-rose-700', sub: 'text-rose-800' },
       ]
     : [
-        { grade: 'Grade A', range: '90–100 คะแนน', label: 'ยอดเยี่ยม (Sehr gut)', box: 'bg-emerald-50 border-emerald-200', title: 'text-emerald-700', sub: 'text-emerald-800' },
-        { grade: 'Grade B', range: '80–89 คะแนน', label: 'ดีมาก (Gut)', box: 'bg-blue-50 border-blue-200', title: 'text-blue-700', sub: 'text-blue-800' },
-        { grade: 'Grade C', range: '70–79 คะแนน', label: 'น่าพอใจ (Befriedigend)', box: 'bg-indigo-50 border-indigo-200', title: 'text-indigo-700', sub: 'text-indigo-800' },
-        { grade: 'Grade D', range: '60–69 คะแนน', label: 'พอใช้/ผ่าน (Ausreichend)', box: 'bg-amber-50 border-amber-200', title: 'text-amber-700', sub: 'text-amber-800' },
-        { grade: 'Grade E', range: '50–59 คะแนน', label: 'ต้องพัฒนา (Mangelhaft)', box: 'bg-orange-50 border-orange-200', title: 'text-orange-700', sub: 'text-orange-800' },
-        { grade: 'Grade F', range: '0–49 คะแนน', label: 'ไม่ผ่านเกณฑ์ (Ungenügend)', box: 'bg-rose-50 border-rose-200', title: 'text-rose-700', sub: 'text-rose-800' },
+        { grade: 'Grade A', range: '90–100 คะแนน', label: isEn ? 'ยอดเยี่ยม (Distinction)' : 'ยอดเยี่ยม (Sehr gut)', box: 'bg-emerald-50 border-emerald-200', title: 'text-emerald-700', sub: 'text-emerald-800' },
+        { grade: 'Grade B', range: '80–89 คะแนน', label: isEn ? 'ดีมาก (Merit)' : 'ดีมาก (Gut)', box: 'bg-blue-50 border-blue-200', title: 'text-blue-700', sub: 'text-blue-800' },
+        { grade: 'Grade C', range: '70–79 คะแนน', label: isEn ? 'น่าพอใจ (Solid Pass)' : 'น่าพอใจ (Befriedigend)', box: 'bg-indigo-50 border-indigo-200', title: 'text-indigo-700', sub: 'text-indigo-800' },
+        { grade: 'Grade D', range: '60–69 คะแนน', label: isEn ? 'พอใช้/ผ่าน (Pass)' : 'พอใช้/ผ่าน (Ausreichend)', box: 'bg-amber-50 border-amber-200', title: 'text-amber-700', sub: 'text-amber-800' },
+        { grade: 'Grade E', range: '50–59 คะแนน', label: isEn ? 'ต้องพัฒนา (Below Pass)' : 'ต้องพัฒนา (Mangelhaft)', box: 'bg-orange-50 border-orange-200', title: 'text-orange-700', sub: 'text-orange-800' },
+        { grade: 'Grade F', range: '0–49 คะแนน', label: isEn ? 'ไม่ผ่านเกณฑ์ (Fail)' : 'ไม่ผ่านเกณฑ์ (Ungenügend)', box: 'bg-rose-50 border-rose-200', title: 'text-rose-700', sub: 'text-rose-800' },
       ];
 
-  const officialGoetheCriteria = [
-    {
-      de: 'Aufgabenerfüllung',
-      th: 'การตอบโจทย์ครบถ้วน เนื้อหา และระดับความสุภาพ (Sie/du)',
-      max: weights.task_fulfillment + weights.content_development + weights.register,
-      breakdown: `Aufgabenbewältigung (${weights.task_fulfillment}) + Inhalt (${weights.content_development}) + Register (${weights.register})`,
-    },
-    {
-      de: 'Kohärenz',
-      th: 'โครงสร้าง การลำดับความคิด และความเชื่อมโยง',
-      max: weights.cohesion,
-      breakdown: `Kohärenz & Kohäsion (${weights.cohesion})`,
-    },
-    {
-      de: 'Wortschatz',
-      th: 'ขอบเขตและความแม่นยำในการเลือกใช้คำศัพท์',
-      max: weights.vocabulary,
-      breakdown: `Wortschatz (${weights.vocabulary})`,
-    },
-    {
-      de: 'Strukturen',
-      th: 'ไวยากรณ์ โครงสร้างประโยค และการสะกด/วรรคตอน',
-      max: weights.grammar + weights.mechanics,
-      breakdown: `Grammatik (${weights.grammar}) + Rechtschreibung (${weights.mechanics})`,
-    },
-  ];
+  const officialCriteria = isEn
+    ? [
+        {
+          de: 'Task Achievement',
+          th: 'การตอบโจทย์ครบถ้วน เนื้อหา และระดับความสุภาพ (Formal/Informal)',
+          max: weights.task_fulfillment + weights.content_development + weights.register,
+          breakdown: `Task Fulfillment (${weights.task_fulfillment}) + Content (${weights.content_development}) + Register (${weights.register})`,
+        },
+        {
+          de: 'Coherence & Cohesion',
+          th: 'โครงสร้างย่อหน้า การลำดับความคิด และคำเชื่อม (Linking Words)',
+          max: weights.cohesion,
+          breakdown: `Cohesion & Coherence (${weights.cohesion})`,
+        },
+        {
+          de: 'Lexical Resource',
+          th: 'ขอบเขตและความแม่นยำในการเลือกใช้คำศัพท์และ Collocations',
+          max: weights.vocabulary,
+          breakdown: `Vocabulary (${weights.vocabulary})`,
+        },
+        {
+          de: 'Grammatical Range & Accuracy',
+          th: 'ไวยากรณ์ โครงสร้างประโยค การสะกดคำ และเครื่องหมายวรรคตอน',
+          max: weights.grammar + weights.mechanics,
+          breakdown: `Grammar (${weights.grammar}) + Mechanics (${weights.mechanics})`,
+        },
+      ]
+    : [
+        {
+          de: 'Aufgabenerfüllung',
+          th: 'การตอบโจทย์ครบถ้วน เนื้อหา และระดับความสุภาพ (Sie/du)',
+          max: weights.task_fulfillment + weights.content_development + weights.register,
+          breakdown: `Aufgabenbewältigung (${weights.task_fulfillment}) + Inhalt (${weights.content_development}) + Register (${weights.register})`,
+        },
+        {
+          de: 'Kohärenz',
+          th: 'โครงสร้าง การลำดับความคิด และความเชื่อมโยง',
+          max: weights.cohesion,
+          breakdown: `Kohärenz & Kohäsion (${weights.cohesion})`,
+        },
+        {
+          de: 'Wortschatz',
+          th: 'ขอบเขตและความแม่นยำในการเลือกใช้คำศัพท์',
+          max: weights.vocabulary,
+          breakdown: `Wortschatz (${weights.vocabulary})`,
+        },
+        {
+          de: 'Strukturen',
+          th: 'ไวยากรณ์ โครงสร้างประโยค และการสะกด/วรรคตอน',
+          max: weights.grammar + weights.mechanics,
+          breakdown: `Grammatik (${weights.grammar}) + Rechtschreibung (${weights.mechanics})`,
+        },
+      ];
 
   return (
     <div className="space-y-6 py-6">
@@ -63,13 +96,17 @@ export const RubricView: React.FC = () => {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-blue-700">
-              Akademischer Bewertungsrahmen
+              {isEn ? 'Academic English Writing Rubric' : 'Akademischer Bewertungsrahmen'}
             </span>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 tracking-tight">
               เกณฑ์การประเมินตามระดับสอบ CEFR (Assessment Rubric)
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl leading-relaxed">
-              ปรับเกณฑ์คะแนนให้ตรงตามโครงสร้างสอบจริงของ Goethe-Institut และ telc: ระดับเริ่มต้น <strong>A1–A2 ใช้เกณฑ์ 25 คะแนนเต็ม</strong> (ผ่าน 15/25) และระดับกลางถึงสูง <strong>B1–C1 ใช้เกณฑ์ 100 คะแนนเต็ม</strong> (ผ่าน 60/100)
+              {isEn
+                ? 'ใช้โครงสร้างคะแนนมาตรฐานเดียวกับระบบหลัก: ระดับเริ่มต้น '
+                : 'ปรับเกณฑ์คะแนนให้ตรงตามโครงสร้างสอบจริงของ Goethe-Institut และ telc: ระดับเริ่มต้น '}
+              <strong>A1–A2 ใช้เกณฑ์ 25 คะแนนเต็ม</strong> (ผ่าน 15/25) และระดับกลางถึงสูง{' '}
+              <strong>B1–C1 ใช้เกณฑ์ 100 คะแนนเต็ม</strong> (ผ่าน 60/100)
             </p>
           </div>
 
@@ -102,11 +139,15 @@ export const RubricView: React.FC = () => {
             <div>
               <span className="font-bold text-blue-950 block">
                 {isBasic
-                  ? 'เกณฑ์พาร์ท Schreiben ระดับ A1–A2: คะแนนเต็ม 25 คะแนน'
-                  : 'เกณฑ์พาร์ท Schreiben ระดับ B1–C1: คะแนนเต็ม 100 คะแนน'}
+                  ? `เกณฑ์พาร์ท Writing ระดับ A1–A2${isEn ? ' (EN)' : ''}: คะแนนเต็ม 25 คะแนน`
+                  : `เกณฑ์พาร์ท Writing ระดับ B1–C1${isEn ? ' (EN)' : ''}: คะแนนเต็ม 100 คะแนน`}
               </span>
               <span className="text-blue-800">
-                {isBasic
+                {isEn
+                  ? isBasic
+                    ? 'เน้นการสื่อสารครบทุกประเด็นคำถามด้วยประโยค SVO ชัดเจน ใช้ Tense พื้นฐาน (Present/Past Simple) ถูกต้อง และเลือกใช้คำทักทายเหมาะสม'
+                    : 'ประเมินการให้เหตุผลเชิงวิเคราะห์ ความหลากหลายของ Linking Words โครงสร้างประโยคซับซ้อน (Clauses/Conditionals/Inversion) และสำนวนวิชาการ'
+                  : isBasic
                   ? 'เน้นการสื่อสารครบทุก Leitpunkte ด้วยประโยคสั้นชัดเจน ผันกริยา V2 ถูกต้อง และใช้ระดับภาษา (du/Sie) เหมาะสม — ไม่หักคะแนนเพราะขาดประโยคซับซ้อนระดับสูง'
                   : 'ประเมินความสามารถในการให้เหตุผล ชั่งน้ำหนักข้อดี-ข้อเสีย ความหลากหลายของคำเชื่อม (Konnektoren) โครงสร้างประโยคซับซ้อน และสำนวนระดับวิชาการ'}
               </span>
@@ -121,22 +162,24 @@ export const RubricView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Official Goethe Criteria Mapping */}
+      {/* 4 Official Criteria Mapping */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-base font-bold text-slate-900">
-            เกณฑ์ทางการ 4 ด้านของ Goethe-Institut ({maxTotal} Punkte)
+            {isEn
+              ? `เกณฑ์มาตรฐานสากล 4 ด้าน (CEFR / Cambridge Writing Criteria — ${maxTotal} Points)`
+              : `เกณฑ์ทางการ 4 ด้านของ Goethe-Institut (${maxTotal} Punkte)`}
           </h2>
           <span className="text-xs text-slate-500">
-            รวม {officialGoetheCriteria.reduce((acc, c) => acc + c.max, 0)} / {maxTotal} คะแนนเต็ม
+            รวม {officialCriteria.reduce((acc, c) => acc + c.max, 0)} / {maxTotal} คะแนนเต็ม
           </span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {officialGoetheCriteria.map((crit) => (
+          {officialCriteria.map((crit) => (
             <div key={crit.de} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <span className="font-bold text-sm text-slate-900">{crit.de}</span>
-                <span className="font-extrabold text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                <span className="font-extrabold text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 shrink-0">
                   {crit.max} คะแนน
                 </span>
               </div>
@@ -151,7 +194,9 @@ export const RubricView: React.FC = () => {
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-slate-900">
-            โครงสร้างคะแนนทั้ง 7 หมวดย่อย (Die 7 Bewertungskategorien — รวม {maxTotal} คะแนน)
+            {isEn
+              ? `โครงสร้างคะแนนทั้ง 7 หมวดย่อย (The 7 Assessment Categories — รวม ${maxTotal} คะแนน)`
+              : `โครงสร้างคะแนนทั้ง 7 หมวดย่อย (Die 7 Bewertungskategorien — รวม ${maxTotal} คะแนน)`}
           </h2>
         </div>
 
@@ -160,7 +205,7 @@ export const RubricView: React.FC = () => {
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-sm text-slate-900">
-                1. Aufgabenbewältigung (Task Fulfillment)
+                {isEn ? '1. Task Fulfillment' : '1. Aufgabenbewältigung (Task Fulfillment)'}
               </span>
               <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                 {weights.task_fulfillment} คะแนน
@@ -168,8 +213,8 @@ export const RubricView: React.FC = () => {
             </div>
             <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
               <li>ความเข้าใจคำสั่งและวัตถุประสงค์ของโจทย์อย่างถ่องแท้</li>
-              <li>การตอบคำถามและครอบคลุมทุกประเด็นที่กำหนด (Leitpunkte)</li>
-              <li>การเขียนสอดคล้องกับประเภทข้อความ (Textsortenadäquatheit: อีเมล, จดหมาย, แสดงความเห็น)</li>
+              <li>การตอบคำถามและครอบคลุมทุกประเด็นที่กำหนด ({isEn ? 'Required Task Points' : 'Leitpunkte'})</li>
+              <li>การเขียนสอดคล้องกับประเภทข้อความ (อีเมล, จดหมาย, เรียงความแสดงความเห็น, รายงาน)</li>
               <li>การควบคุมเนื้อหาและจำนวนคำให้อยู่ในขอบเขตที่ระดับสอบกำหนด</li>
             </ul>
           </div>
@@ -178,7 +223,7 @@ export const RubricView: React.FC = () => {
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-sm text-slate-900">
-                2. Inhalt & Entwicklung (Content Development)
+                {isEn ? '2. Content & Development' : '2. Inhalt & Entwicklung (Content Development)'}
               </span>
               <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                 {weights.content_development} คะแนน
@@ -195,7 +240,7 @@ export const RubricView: React.FC = () => {
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-sm text-slate-900">
-                3. Wortschatz (Vocabulary)
+                {isEn ? '3. Lexical Resource (Vocabulary)' : '3. Wortschatz (Vocabulary)'}
               </span>
               <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                 {weights.vocabulary} คะแนน
@@ -212,14 +257,18 @@ export const RubricView: React.FC = () => {
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-sm text-slate-900">
-                4. Grammatik (Grammar)
+                {isEn ? '4. Grammatical Range & Accuracy' : '4. Grammatik (Grammar)'}
               </span>
               <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                 {weights.grammar} คะแนน
               </span>
             </div>
             <p className="text-xs text-slate-600">
-              {isBasic
+              {isEn
+                ? isBasic
+                  ? 'ประเมินลำดับคำ SVO, Subject-Verb Agreement, Present/Past Simple, Modal Verbs และ Prepositions พื้นฐาน'
+                  : 'ประเมินความแม่นยำของ Tenses, Complex Clauses, Conditionals, Passive Voice, Inversion และ Hedging ตามระดับสอบ'
+                : isBasic
                 ? 'ประเมินการผันกริยา Präsens/Perfekt, ตำแหน่งกริยา V2, Trennbare Verben, Modalverben และการใช้ Artikel/Kasus พื้นฐาน'
                 : 'ประเมินการผันกริยาและกาล, ตำแหน่งคำในประโยคหลักและอนุประโยค (V2/Verbletzt), Kasus & Artikel, Passiv/Konjunktiv II และความแม่นยำรวม'}
             </p>
@@ -229,14 +278,18 @@ export const RubricView: React.FC = () => {
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-sm text-slate-900">
-                5. Kohärenz & Kohäsion (Cohesion & Coherence)
+                {isEn ? '5. Coherence & Cohesion' : '5. Kohärenz & Kohäsion (Cohesion & Coherence)'}
               </span>
               <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                 {weights.cohesion} คะแนน
               </span>
             </div>
             <p className="text-xs text-slate-600">
-              {isBasic
+              {isEn
+                ? isBasic
+                  ? 'ประเมินการเชื่อมประโยคด้วยคำเชื่อมพื้นฐาน (and, but, because, so) และความต่อเนื่องของเนื้อความในจดหมายสั้น'
+                  : 'ประเมินการจัดโครงสร้างย่อหน้า (Introduction–Body–Conclusion), การใช้ Linking Words เชิงตรรกะ (However, Furthermore, Although) และความลื่นไหลของข้อความ'
+                : isBasic
                 ? 'ประเมินการเชื่อมประโยคด้วยคำเชื่อมพื้นฐาน (und, aber, oder, denn, deshalb, weil) และความต่อเนื่องของเนื้อความในจดหมายสั้น'
                 : 'ประเมินการจัดโครงสร้างย่อหน้า (Einleitung–Hauptteil–Schluss), การใช้คำเชื่อมเชิงตรรกะ (Konnektoren) และความลื่นไหลในการเปลี่ยนประเด็น'}
             </p>
@@ -247,15 +300,23 @@ export const RubricView: React.FC = () => {
             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-sm text-slate-900">
-                  6. Register & Stil (Register & Style)
+                  {isEn ? '6. Register & Tone' : '6. Register & Stil (Register & Style)'}
                 </span>
                 <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                   {weights.register} คะแนน
                 </span>
               </div>
               <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
-                <li>ระดับความเป็นทางการ (du/ihr vs. Sie) สอดคล้องกับผู้รับ</li>
-                <li>คำขึ้นต้น (Anrede) และคำลงท้าย (Grußformel) ถูกต้อง</li>
+                <li>
+                  {isEn
+                    ? 'ระดับความเป็นทางการ (Formal vs. Semi-formal/Informal) สอดคล้องกับผู้รับ'
+                    : 'ระดับความเป็นทางการ (du/ihr vs. Sie) สอดคล้องกับผู้รับ'}
+                </li>
+                <li>
+                  {isEn
+                    ? 'คำขึ้นต้น (Salutation) และคำลงท้าย (Sign-off) ถูกต้องตามประเภทจดหมาย'
+                    : 'คำขึ้นต้น (Anrede) และคำลงท้าย (Grußformel) ถูกต้อง'}
+                </li>
                 <li>ความสม่ำเสมอของระดับภาษาตลอดทั้งข้อความ</li>
               </ul>
             </div>
@@ -263,16 +324,26 @@ export const RubricView: React.FC = () => {
             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-sm text-slate-900">
-                  7. Rechtschreibung & Zeichen (Mechanics)
+                  {isEn ? '7. Spelling & Punctuation (Mechanics)' : '7. Rechtschreibung & Zeichen (Mechanics)'}
                 </span>
                 <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                   {weights.mechanics} คะแนน
                 </span>
               </div>
               <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
-                <li>การสะกดคำและตัวอักษร Umlaut (ä, ö, ü, ß)</li>
-                <li>การเขียนตัวพิมพ์ใหญ่คำนาม (Großschreibung)</li>
-                <li>การใช้เครื่องหมายวรรคตอน (Kommasetzung & Satzzeichen)</li>
+                {isEn ? (
+                  <>
+                    <li>ความถูกต้องของการสะกดคำภาษาอังกฤษ (UK/US consistency)</li>
+                    <li>การใช้ตัวพิมพ์ใหญ่ขึ้นต้นประโยค ชื่อเฉพาะ และสรรพนาม I</li>
+                    <li>เครื่องหมายวรรคตอน (. , ; —) และการหลีกเลี่ยง Comma Splice</li>
+                  </>
+                ) : (
+                  <>
+                    <li>การสะกดคำและตัวอักษร Umlaut (ä, ö, ü, ß)</li>
+                    <li>การเขียนตัวพิมพ์ใหญ่คำนาม (Großschreibung)</li>
+                    <li>การใช้เครื่องหมายวรรคตอน (Kommasetzung & Satzzeichen)</li>
+                  </>
+                )}
               </ul>
             </div>
           </div>
@@ -287,7 +358,9 @@ export const RubricView: React.FC = () => {
           </h3>
           <span className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>เกณฑ์สอบผ่าน Goethe: ≥ {passThreshold}/{maxTotal} (Grade D ขึ้นไป)</span>
+            <span>
+              เกณฑ์สอบผ่าน {isEn ? 'CEFR Writing' : 'Goethe'}: ≥ {passThreshold}/{maxTotal} (Grade D ขึ้นไป)
+            </span>
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 text-center text-xs">
